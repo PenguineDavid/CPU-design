@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>CPU Opcode & ALU Control Designer</title>
+
+    <style>
+        body {
+            background: #0b0b0b;
+            color: #0ff;
+            font-family: monospace;
+            padding: 15px;
+        }
+
+        h2 {
+            margin-top: 0;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .controls input,
+        .controls button {
+            background: #111;
+            color: #0ff;
+            border: 1px solid #333;
+            padding: 6px;
+            font-family: monospace;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #222;
+        }
+
+        .opcode-control {
+            display: flex;
+            gap: 6px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th,
+        td {
+            border: 1px solid #333;
+            text-align: center;
+            padding: 4px;
+            font-size: 13px;
+        }
+
+        th {
+            background: #111;
+        }
+
+        .toggle {
+            width: 26px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .toggle.zero {
+            background: #000;
+            color: #fff;
+        }
+
+        .toggle.one {
+            background: #fff;
+            color: #000;
+        }
+
+        .toggle.x {
+            background: #222;
+            color: #0ff;
+        }
+
+        .toggle.readonly {
+            cursor: default;
+            background: #111;
+            color: #0ff;
+        }
+
+        input.text {
+            width: 100%;
+            background: #111;
+            color: #0ff;
+            border: none;
+            font-family: monospace;
+        }
+
+        .scroll {
+            max-height: 70vh;
+            overflow: auto;
+            border: 1px solid #333;
+        }
+
+        .cpu-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .cpu-item {
+            border: 1px solid #333;
+            padding: 4px 6px;
+        }
+
+        .cpu-item button {
+            margin-left: 6px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>CPU Opcode & CPU Control Word Designer</h2>
+
+    <div class="controls">
+
+        <label>
+            Opcode bit-width
+            <div class="opcode-control">
+                <button onclick="changeOpcodeBits(-1)">÷2</button>
+                <input id="opcodeBits" value="4" readonly>
+                <button onclick="changeOpcodeBits(1)">×2</button>
+            </div>
+        </label>
+
+        <label>
+            Instruction count
+            <input id="instructionCount" readonly>
+        </label>
+
+        <label>
+            Register select bits
+            <input type="number" id="regBits" value="3" min="0">
+        </label>
+
+    </div>
+
+    <h3>CPU Control Signals</h3>
+
+    <div class="cpu-list" id="cpuList"></div>
+
+    <div style="margin-top:6px">
+        <input id="newCpuName" placeholder="New signal name (e.g. CIN)">
+        <button onclick="addCpuSignal()">Add CPU Signal</button>
+    </div>
+
+    <br>
+
+    <div class="scroll">
+        <table id="opcodeTable"></table>
+    </div>
+
+    <script>
+        let opcodeBits = 4;
+
+        let cpuSignals = [
+            "EN", "!A", "!B", "CIN", "XOR", "OR", "FC", "LSH", "RSH", "PUS", "POP"
+        ];
+
+        function saveState() {
+            const state = {
+                opcodeBits,
+                regBits: document.getElementById("regBits").value,
+                cpuSignals,
+                table: []
+            };
+
+            document.querySelectorAll("#opcodeTable tbody tr").forEach(tr => {
+                const row = [];
+                tr.querySelectorAll("td").forEach(td => {
+                    if (td.dataset.state !== undefined) row.push(td.dataset.state);
+                    else if (td.querySelector("input")) row.push(td.querySelector("input").value);
+                });
+                state.table.push(row);
+            });
+
+            localStorage.setItem("cpuDesignerState", JSON.stringify(state));
+        }
+
+        function loadState() {
+            const raw = localStorage.getItem("cpuDesignerState");
+            if (!raw) return;
+
+            const state = JSON.parse(raw);
+            opcodeBits = state.opcodeBits;
+            cpuSignals = state.cpuSignals;
+
+            document.getElementById("opcodeBits").value = opcodeBits;
+            document.getElementById("regBits").value = state.regBits;
+
+            updateInstructionCount();
+            buildCpuList();
+            buildTable();
+
+            const rows = state.table || [];
+            document.querySelectorAll("#opcodeTable tbody tr").forEach((tr, r) => {
+                const row = rows[r];
+                if (!row) return;
+                let i = 0;
+                tr.querySelectorAll("td").forEach(td => {
+                    if (td.dataset.state !== undefined) {
+                        td.dataset.state = row[i];
+                        td.textContent = row[i];
+                        td.className = "toggle " + (row[i] === "1" ? "one" : row[i] === "X" ? "x" : "zero");
+                        i++;
+                    } else if (td.querySelector("input")) {
+                        td.querySelector("input").value = row[i++] || "";
+                    }
+                });
+            });
+        }
+
+        function updateInstructionCount() {
+            document.getElementById("instructionCount").value = 1 << opcodeBits;
+        }
+
+        function changeOpcodeBits(delta) {
+            opcodeBits = Math.max(1, opcodeBits + delta);
+            document.getElementById("opcodeBits").value = opcodeBits;
+            updateInstructionCount();
+            buildTable();
+            saveState();
+        }
+
+        function triToggle(td) {
+            const s = td.dataset.state;
+            const next = s === "0" ? "1" : s === "1" ? "X" : "0";
+            td.dataset.state = next;
+            td.textContent = next;
+            td.className = "toggle " + (next === "1" ? "one" : next === "X" ? "x" : "zero");
+            saveState();
+        }
+
+        function createToggle() {
+            const td = document.createElement("td");
+            td.dataset.state = "0";
+            td.textContent = "0";
+            td.className = "toggle zero";
+            td.onclick = () => triToggle(td);
+            return td;
+        }
+
+        function createOpcodeBit(bit) {
+            const td = document.createElement("td");
+            td.textContent = bit;
+            td.className = "toggle readonly";
+            return td;
+        }
+
+        function createTextCell() {
+            const td = document.createElement("td");
+            const input = document.createElement("input");
+            input.className = "text";
+            input.oninput = saveState;
+            td.appendChild(input);
+            return td;
+        }
+
+        function buildCpuList() {
+            const list = document.getElementById("cpuList");
+            list.innerHTML = "";
+            cpuSignals.forEach((sig, i) => {
+                const div = document.createElement("div");
+                div.className = "cpu-item";
+                div.textContent = sig;
+                const btn = document.createElement("button");
+                btn.textContent = "✕";
+                btn.onclick = () => {
+                    cpuSignals.splice(i, 1);
+                    buildAluList();
+                    buildTable();
+                    saveState();
+                };
+                div.appendChild(btn);
+                list.appendChild(div);
+            });
+        }
+
+        function addCpuSignal() {
+            const name = document.getElementById("newCpuName").value.trim();
+            if (!name || cpuSignals.includes(name)) return;
+            cpuSignals.push(name);
+            document.getElementById("newCpuName").value = "";
+            buildCpuList();
+            buildTable();
+            saveState();
+        }
+
+        function buildTable() {
+            const regBits = +document.getElementById("regBits").value;
+            const rows = 1 << opcodeBits;
+
+            const table = document.getElementById("opcodeTable");
+            table.innerHTML = "";
+
+            const thead = document.createElement("thead");
+            const h1 = document.createElement("tr");
+
+            h1.innerHTML += `<th colspan="${opcodeBits}">Opcode</th>`;
+            if (regBits) h1.innerHTML += `<th colspan="${regBits}">Registers</th>`;
+            if (cpuSignals.length) h1.innerHTML += `<th colspan="${cpuSignals.length}">CPU Control</th>`;
+            h1.innerHTML += `<th>Mnemonic</th><th>Description</th><th>Pseudocode</th>`;
+            thead.appendChild(h1);
+
+            const h2 = document.createElement("tr");
+            for (let i = opcodeBits - 1; i >= 0; i--) h2.innerHTML += `<th>${i}</th>`;
+            for (let i = 0; i < regBits; i++) h2.innerHTML += `<th>R${i}</th>`;
+            cpuSignals.forEach(s => h2.innerHTML += `<th>${s}</th>`);
+            h2.innerHTML += `<th></th><th></th><th></th>`;
+            thead.appendChild(h2);
+
+            table.appendChild(thead);
+
+            const tbody = document.createElement("tbody");
+
+            for (let row = 0; row < rows; row++) {
+                const tr = document.createElement("tr");
+                const bin = row.toString(2).padStart(opcodeBits, "0");
+
+                for (const b of bin) tr.appendChild(createOpcodeBit(b));
+                for (let i = 0; i < regBits; i++) tr.appendChild(createToggle());
+                cpuSignals.forEach(() => tr.appendChild(createToggle()));
+
+                tr.appendChild(createTextCell());
+                tr.appendChild(createTextCell());
+                tr.appendChild(createTextCell());
+
+                tbody.appendChild(tr);
+            }
+
+            table.appendChild(tbody);
+        }
+
+        updateInstructionCount();
+        buildCpuList();
+        buildTable();
+        loadState();
+    </script>
+
+</body>
+
+</html>
