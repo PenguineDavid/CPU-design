@@ -121,3 +121,9 @@ A web-based tool for designing CPU instruction sets and their associated control
 - Designed for educational and CPU design prototyping purposes.
 - No backend required; entirely client-side.
 - Dark theme with neon highlights optimized for readability and visual clarity.
+
+---
+
+## Copy right notice
+
+- ©2026 David S all rights reserved
