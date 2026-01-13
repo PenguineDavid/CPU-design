@@ -18,4 +18,4 @@
   ## Bug Fixes:  
     - `fixed the fact section areas didnt have names`  
   ## features:  
-    - `None~  
+    - `None`  
