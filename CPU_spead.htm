@@ -3,24 +3,31 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>CPU Opcode & ALU Control Designer</title>
+    <title>CPU Opcode Designer & Boolean Algebra Tool</title>
 
     <style>
         body {
+            background: rgb(0, 0,0)
+        }
+        /* CPU Opcode Designer Styles */
+        #spreadsheet {
             background: #0b0b0b;
             color: #0ff;
             font-family: monospace;
             padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            border: 1px solid #333;
         }
 
-        .controls {
+        #spreadsheet .controls {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
             gap: 10px;
         }
 
-        input,
-        button {
+        #spreadsheet input,
+        #spreadsheet button {
             background: #111;
             color: #0ff;
             border: 1px solid #333;
@@ -28,370 +35,858 @@
             font-family: monospace;
         }
 
-        button {
+        #spreadsheet button {
             cursor: pointer
         }
 
-        table {
+        #spreadsheet table {
             border-collapse: collapse;
             width: 100%;
         }
 
-        td,
-        th {
+        #spreadsheet td,
+        #spreadsheet th {
             border: 1px solid #333;
             text-align: center;
             padding: 4px;
         }
 
-        th {
+        #spreadsheet th {
             background: #111
         }
 
-        .toggle {
+        #spreadsheet .toggle {
             cursor: pointer;
             user-select: none;
         }
 
-        .zero {
+        #spreadsheet .zero {
             background: #000;
             color: #fff
         }
 
-        .one {
+        #spreadsheet .one {
             background: #fff;
             color: #000
         }
 
-        .x {
+        #spreadsheet .x {
             background: #222;
             color: #0ff
         }
 
-        .readonly {
+        #spreadsheet .readonly {
             background: #111;
             cursor: default;
         }
 
-        .scroll {
+        #spreadsheet .scroll {
             max-height: 70vh;
             overflow: auto;
             border: 1px solid #333;
         }
 
-        .cpu-list {
+        #spreadsheet .cpu-list {
             display: flex;
             flex-wrap: wrap;
             gap: 6px;
         }
 
-        .cpu-item {
+        #spreadsheet .cpu-item {
             border: 1px solid #333;
             padding: 4px 6px;
         }
 
-        .cpu-item button {
+        #spreadsheet .cpu-item button {
             margin-left: 6px
         }
 
-        input.text {
+        #spreadsheet input.text {
             width: 100%;
             border: none;
             background: #111;
             color: #0ff;
         }
 
-        .merged-selected {
+        #spreadsheet .merged-selected {
             outline: 2px solid #0ff;
+        }
+
+        /* Boolean Algebra Tool Styles */
+        #boolean-tool {
+            --bg-dark: #0b0b0b;
+            --bg-mid: #1e1e1e;
+            --panel: #0f0f0f;
+            --neon-var: #39ff14;
+            --neon-op: #00e5ff;
+            --neon-br: #ff4dff;
+            --neon-text: #00ffe1;
+            --muted: #9aa0a6;
+            background: linear-gradient(180deg, var(--bg-dark), #111);
+            color: var(--neon-text);
+            font-family: "Consolas", "Courier New", monospace;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+
+        #boolean-tool .wrap {
+            max-width: 1180px;
+            margin: 18px auto;
+            padding: 18px;
+            background: linear-gradient(180deg, var(--panel), #101010);
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, .6);
+        }
+
+        #boolean-tool h1 {
+            margin: 0 0 8px 0;
+            color: var(--neon-text)
+        }
+
+        #boolean-tool .row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap
+        }
+
+        #boolean-tool textarea {
+            width: 100%;
+            min-height: 54px;
+            background: #111;
+            border: 1px solid #2a2a2a;
+            color: #eef;
+            padding: 12px;
+            font-size: 15px;
+            border-radius: 6px;
+            resize: vertical
+        }
+
+        #boolean-tool button {
+            background: #111;
+            border: 1px solid #2a2a2a;
+            color: var(--neon-op);
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer
+        }
+
+        #boolean-tool .controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin: 8px 0 16px 0
+        }
+
+        #boolean-tool .panels {
+            display: grid;
+            grid-template-columns: 1fr 420px;
+            gap: 16px
+        }
+
+        #boolean-tool .panel {
+            background: #0b0b0b;
+            border: 1px solid #222;
+            padding: 12px;
+            border-radius: 8px;
+            overflow: auto
+        }
+
+        #boolean-tool .small {
+            font-size: 13px;
+            color: var(--muted)
+        }
+
+        #boolean-tool .expr-highlight {
+            background: #0b0b0b;
+            padding: 8px;
+            border-radius: 6px;
+            min-height: 34px
+        }
+
+        #boolean-tool .neon-bracket {
+            color: var(--neon-br)
+        }
+
+        #boolean-tool .neon-operator {
+            color: var(--neon-op)
+        }
+
+        #boolean-tool .neon-var {
+            color: var(--neon-var)
+        }
+
+        #boolean-tool table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px
+        }
+
+        #boolean-tool th,
+        #boolean-tool td {
+            border: 1px solid #222;
+            padding: 6px;
+            text-align: center;
+            font-family: inherit
+        }
+
+        #boolean-tool th {
+            background: #141414;
+            color: var(--neon-text)
+        }
+
+        #boolean-tool .kmap-wrap {
+            position: relative;
+            display: inline-block;
+            background: #0b0b0b;
+            padding: 8px;
+            border-radius: 6px
+        }
+
+        #boolean-tool .kmap-table td {
+            width: 48px;
+            height: 48px;
+            border: 1px solid #222;
+            font-weight: bold
+        }
+
+        #boolean-tool .kmap-canvas {
+            position: absolute;
+            left: 0;
+            top: 0;
+            pointer-events: none
+        }
+
+        #boolean-tool .notice {
+            color: var(--muted);
+            font-size: 13px;
+            margin-top: 6px
+        }
+
+        #boolean-tool .simplified {
+            word-break: break-all;
+            padding: 6px;
+            background: #0a0a0a;
+            border-radius: 6px;
+            margin-top: 6px
+        }
+
+        #boolean-tool .group-pill {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 999px;
+            margin: 4px 6px 4px 0;
+            font-size: 13px
+        }
+
+        #boolean-tool .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px
+        }
+
+        /* Sidebar Styles */
+        #sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 260px;
+            height: 100vh;
+            background: linear-gradient(180deg, #0a0a0a, #121212);
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px 0;
+            border-right: 1px solid #333;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+            z-index: 100;
+            overflow-y: auto;
+        }
+
+        #sidebar h3 {
+            color: #00e5ff;
+            margin: 0 20px 20px 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+            font-size: 18px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #sidebar h4 {
+            color: #00ffee;
+            margin: 15px 20px 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .sidebar-content {
+            padding: 0 20px;
+        }
+
+        .sidebar-section {
+            margin-bottom: 20px;
+        }
+
+        .sidebar-text {
+            margin: 10px 20px;
+            line-height: 1.5;
+            color: #cccccc;
+            font-size: 14px;
+        }
+
+        .sidebar-text.small {
+            font-size: 12px;
+            color: #888;
+            margin: 5px 20px;
+        }
+
+        .sidebar-link {
+            display: block;
+            color: #ffffff;
+            text-decoration: none;
+            padding: 8px 20px;
+            margin: 3px 0;
+            border-left: 3px solid transparent;
+            transition: all 0.3s ease;
+            font-size: 13px;
+        }
+
+        .sidebar-link:hover {
+            background: rgba(0, 229, 255, 0.1);
+            border-left: 3px solid #00e5ff;
+            color: #ffffff;
+            padding-left: 25px;
+        }
+
+        .sidebar-footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #333;
+        }
+
+        /* Main Content Wrapper */
+        #content-wrapper {
+            margin-left: 260px; /* Same as sidebar width */
+            padding: 20px;
+            min-height: 100vh;
+            background: #000000;
+        }
+
+        /* Existing sections styling adjustment */
+        #spreadsheet, #boolean-tool {
+            margin-bottom: 30px;
+            max-width: calc(100% - 40px);
+        }
+
+        /* Scrollbar styling for sidebar */
+        #sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #sidebar::-webkit-scrollbar-track {
+            background: #111;
+        }
+
+        #sidebar::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 3px;
+        }
+
+        #sidebar::-webkit-scrollbar-thumb:hover {
+            background: #444;
         }
     </style>
 </head>
 
 <body>
-
-    <h2>CPU Opcode & Control Word Designer</h2>
-
-    <div class="controls">
-        <label>Opcode bits
-            <div>
-                <button onclick="changeOpcodeBits(-1)">÷2</button>
-                <input id="opcodeBits" value="4" readonly>
-                <button onclick="changeOpcodeBits(1)">×2</button>
+    <!-- Sidebar -->
+    <div id="sidebar">
+        <h3>Navigation</h3>
+        <div class="sidebar-content">
+            <p class="sidebar-text">Welcome to the CPU Designer Tool</p>
+    
+            <div class="sidebar-section">
+                <h4>CPU Designer</h4>
+                <a href="#spreadsheet" class="sidebar-link">• Opcode Designer</a>
+                <a href="#controls" class="sidebar-link">• Control Signals</a>
+                <a href="#instructions" class="sidebar-link">• Instruction Set</a>
             </div>
-        </label>
-
-        <label>Instruction count
-            <input id="instructionCount" readonly>
-        </label>
-
-        <label>Register bits
-            <input type="number" id="regBits" value="3" min="0">
-        </label>
+    
+            <div class="sidebar-section">
+                <h4>Boolean Algebra</h4>
+                <a href="#boolean-tool" class="sidebar-link">• Boolean Tool</a>
+                <a href="#table" class="sidebar-link">• Truth Table</a>
+                <a href="#kmap" class="sidebar-link">• K-Map Viewer</a>
+            </div>
+    
+            <div class="sidebar-section">
+                <h4>Quick Links</h4>
+                <a href="https://github.com/PenguineDavid/CPU-design" class="sidebar-link" target="_blank" rel="noopener noreferrer">• Documentation</a>
+                <a href="https://github.com/PenguineDavid" class="sidebar-link" target="_blank" rel="noopener noreferrer">• Author</a>
+                <a href="https://github.com/PenguineDavid/CPU-design?tab=License-1-ov-file" class="sidebar-link" target="_blank" rel="noopener noreferrer">• License</a>
+            </div>
+    
+            <div class="sidebar-footer">
+                <p class="sidebar-text small">CPU Designer v1.2</p>
+                <p class="sidebar-text small">Boolean Algebra Tool</p>
+            </div>
+        </div>
     </div>
 
-    <h3>CPU Control Signals</h3>
-    <div class="cpu-list" id="cpuList"></div>
+    <!-- Main Content Wrapper -->
+    <div id="content-wrapper">
+        <!-- CPU Opcode Designer -->
+        <section id="spreadsheet">
+            <h2>CPU Opcode & Control Word Designer</h2>
 
-    <div>
-        <input id="newCpuName" placeholder="New signal name (e.g. CIN)">
-        <button onclick="addCpuSignal()">Add CPU Signal</button>
-    </div>
+            <div class="controls" id="controls">
+                <label>Opcode bits
+                    <div>
+                        <button onclick="changeOpcodeBits(-1)">÷2</button>
+                        <input id="opcodeBits" value="4" readonly>
+                        <button onclick="changeOpcodeBits(1)">×2</button>
+                    </div>
+                </label>
 
-    <br>
+                <label>Instruction count
+                    <input id="instructionCount" readonly>
+                </label>
 
-    <div class="scroll">
-        <table id="opcodeTable"></table>
-    </div>
+                <label>Register bits
+                    <input type="number" id="regBits" value="3" min="0">
+                </label>
+            </div>
 
-    <script>
-        const STORAGE_KEY = "cpu_opcode_designer_state";
+            <h3>CPU Control Signals</h3>
+            <div class="cpu-list" id="cpuList"></div>
 
-        const opcodeBitsInput = document.getElementById("opcodeBits");
-        const instructionCount = document.getElementById("instructionCount");
-        const regBits = document.getElementById("regBits");
-        const opcodeTable = document.getElementById("opcodeTable");
-        const cpuList = document.getElementById("cpuList");
-        const newCpuName = document.getElementById("newCpuName");
+            <div>
+                <input id="newCpuName" placeholder="New signal name (e.g. CIN)">
+                <button onclick="addCpuSignal()">Add CPU Signal</button>
+            </div>
 
-        let opcodeBits = 4;
-        let cpuSignals = ["EN", "!A", "!B", "CIN", "XOR", "OR", "FC", "PUSH", "POP", "CAL", "RET", "HLT"];
-        let mergedCells = [];
-        let undoStack = [];
-        let cellState = {};
+            <br>
 
-        let dragStartCol = null;
-        let dragRow = null;
-        let selectedMerge = null;
+            <div class="scroll" id="instructions">
+                <table id="opcodeTable"></table>
+            </div>
+        </section>
 
-        function saveState() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({
-                opcodeBits,
-                regBits: regBits.value,
-                cpuSignals,
-                mergedCells,
-                cellState
-            }));
-        }
+        <!-- Boolean Algebra Tool -->
+        <section id="boolean-tool">
+            <div class="wrap">
+                <h1>Boolean Algebra Tool — Truth Table · K-Map · Simplifier</h1>
+                <div class="small">Operators: <span class="neon-op">&amp;</span>=AND &nbsp; <span
+                        class="neon-op">|</span>=OR &nbsp; <span class="neon-op">!</span>=NOT &nbsp; <span
+                        class="neon-op">^</span>=XOR. Variables: A–Z. Parentheses supported.</div>
 
-        function loadState() {
-            const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-            if (!s) return;
-            opcodeBits = s.opcodeBits;
-            opcodeBitsInput.value = opcodeBits;
-            regBits.value = s.regBits;
-            cpuSignals = s.cpuSignals;
-            mergedCells = s.mergedCells || [];
-            cellState = s.cellState || {};
-        }
+                <div style="margin-top:12px">
+                    <textarea id="expr"
+                        placeholder="Type boolean expression: e.g. (A & B) | (!C & D)">(A & B) | (!C & D)</textarea>
+                    <div class="controls">
+                        <button id="genBtn">Generate</button>
+                        <label class="small" style="margin-left:8px">Auto uppercase variables</label>
+                    </div>
+                </div>
 
-        function updateInstructionCount() {
-            instructionCount.value = 1 << opcodeBits;
-        }
+                <div class="panels" style="margin-top:12px">
+                    <div class="panel">
+                        <strong>Input (highlighted)</strong>
+                        <div id="highlight" class="expr-highlight"></div>
 
-        function changeOpcodeBits(d) {
-            opcodeBits = Math.max(1, opcodeBits + d);
-            opcodeBitsInput.value = opcodeBits;
-            mergedCells = [];
-            cellState = {};
-            saveState();
-            rebuild();
-        }
+                        <strong style="display:block;margin-top:12px">Simplified expression (Quine–McCluskey)</strong>
+                        <div id="simplified" class="simplified small">—</div>
 
-        function triToggle(td, key) {
-            td.dataset.state =
-                td.dataset.state === "0" ? "1" :
-                    td.dataset.state === "1" ? "X" : "0";
-            updateToggle(td);
-            cellState[key] = { state: td.dataset.state };
-            saveState();
-        }
+                        <strong style="display:block;margin-top:12px">Truth table</strong>
+                        <div id="table"></div>
+                    </div>
 
-        function updateToggle(td) {
-            td.textContent = td.dataset.state;
-            td.className = "toggle " +
-                (td.dataset.state === "1" ? "one" :
-                    td.dataset.state === "X" ? "x" : "zero");
-        }
+                    <div class="panel">
+                        <strong>Karnaugh Map (supports 2–4 variables)</strong>
+                        <div id="kmapWrap" style="margin-top:8px">
+                            <div id="kmap" class="kmap-wrap"></div>
+                        </div>
+                        <div id="kmapNotice" class="notice"></div>
+                        <div style="margin-top:12px">
+                            <strong>Group legend</strong>
+                            <div id="legend" class="legend"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-        function createToggle(row, col) {
-            const td = document.createElement("td");
-            const key = `${row}-${col}`;
-            td.dataset.state = cellState[key]?.state || "0";
-            updateToggle(td);
+        <script>
+            // CPU Opcode Designer Script
+            const STORAGE_KEY = "cpu_opcode_designer_state";
 
-            td.onmousedown = e => {
-                dragRow = row;
-                dragStartCol = col;
-                undoStack.push(JSON.stringify(mergedCells));
-                e.preventDefault();
-            };
+            const opcodeBitsInput = document.getElementById("opcodeBits");
+            const instructionCount = document.getElementById("instructionCount");
+            const regBits = document.getElementById("regBits");
+            const opcodeTable = document.getElementById("opcodeTable");
+            const cpuList = document.getElementById("cpuList");
+            const newCpuName = document.getElementById("newCpuName");
 
-            td.onclick = () => triToggle(td, key);
-            return td;
-        }
+            let opcodeBits = 4;
+            let cpuSignals = ["EN", "!A", "!B", "CIN", "XOR", "OR", "FC", "PUSH", "POP", "CAL", "RET", "HLT"];
+            let mergedCells = [];
+            let undoStack = [];
+            let cellState = {};
 
-        document.addEventListener("mouseup", e => {
-            if (dragStartCol === null) return;
-            const td = e.target;
-            if (!td.classList.contains("toggle")) return;
+            let dragStartCol = null;
+            let dragRow = null;
+            let selectedMerge = null;
 
-            const tr = td.parentNode;
-            const endCol = [...tr.children].indexOf(td);
-            if (endCol === dragStartCol) return;
+            function saveState() {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                    opcodeBits,
+                    regBits: regBits.value,
+                    cpuSignals,
+                    mergedCells,
+                    cellState
+                }));
+            }
 
-            const regStart = opcodeBits;
-            const regEnd = opcodeBits + +regBits.value - 1;
-            const cpuStart = regEnd + 1;
-            const cpuEnd = cpuStart + cpuSignals.length - 1;
+            function loadState() {
+                const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+                if (!s) return;
+                opcodeBits = s.opcodeBits;
+                opcodeBitsInput.value = opcodeBits;
+                regBits.value = s.regBits;
+                cpuSignals = s.cpuSignals;
+                mergedCells = s.mergedCells || [];
+                cellState = s.cellState || {};
+            }
 
-            const sameSection =
-                (dragStartCol >= regStart && endCol <= regEnd) ||
-                (dragStartCol >= cpuStart && endCol <= cpuEnd);
+            function updateInstructionCount() {
+                instructionCount.value = 1 << opcodeBits;
+            }
 
-            if (!sameSection) return;
-
-            const start = Math.min(dragStartCol, endCol);
-            const span = Math.abs(endCol - dragStartCol) + 1;
-
-            if (mergedCells.some(m =>
-                m.row === dragRow &&
-                !(start + span <= m.startCol || start >= m.startCol + m.span)
-            )) return;
-
-            mergedCells.push({ row: dragRow, startCol: start, span });
-            dragStartCol = null;
-            saveState();
-            rebuild();
-        });
-
-        document.addEventListener("keydown", e => {
-            if (e.key === "Delete" && selectedMerge) {
-                mergedCells = mergedCells.filter(m => m !== selectedMerge);
-                selectedMerge = null;
+            function changeOpcodeBits(d) {
+                opcodeBits = Math.max(1, opcodeBits + d);
+                opcodeBitsInput.value = opcodeBits;
+                mergedCells = [];
+                cellState = {};
                 saveState();
                 rebuild();
             }
 
-            if (e.ctrlKey && e.key === "z") {
-                const prev = undoStack.pop();
-                if (prev) {
-                    mergedCells = JSON.parse(prev);
-                    saveState();
-                    rebuild();
-                }
+            function triToggle(td, key) {
+                td.dataset.state =
+                    td.dataset.state === "0" ? "1" :
+                        td.dataset.state === "1" ? "X" : "0";
+                updateToggle(td);
+                cellState[key] = { state: td.dataset.state };
+                saveState();
             }
-        });
 
-        function addCpuSignal() {
-            const n = newCpuName.value.trim();
-            if (!n || cpuSignals.includes(n)) return;
-            cpuSignals.push(n);
-            newCpuName.value = "";
-            saveState();
-            rebuild();
-        }
+            function updateToggle(td) {
+                td.textContent = td.dataset.state;
+                td.className = "toggle " +
+                    (td.dataset.state === "1" ? "one" :
+                        td.dataset.state === "X" ? "x" : "zero");
+            }
 
-        function buildCpuList() {
-            cpuList.innerHTML = "";
-            cpuSignals.forEach((s, i) => {
-                const d = document.createElement("div");
-                d.className = "cpu-item";
-                d.textContent = s;
-                const b = document.createElement("button");
-                b.textContent = "✕";
-                b.onclick = () => {
-                    cpuSignals.splice(i, 1);
-                    mergedCells = [];
-                    cellState = {};
-                    saveState();
-                    rebuild();
+            function createToggle(row, col) {
+                const td = document.createElement("td");
+                const key = `${row}-${col}`;
+                td.dataset.state = cellState[key]?.state || "0";
+                updateToggle(td);
+
+                td.onmousedown = e => {
+                    dragRow = row;
+                    dragStartCol = col;
+                    undoStack.push(JSON.stringify(mergedCells));
+                    e.preventDefault();
                 };
-                d.appendChild(b);
-                cpuList.appendChild(d);
-            });
-        }
 
-        function rebuild() {
-            buildCpuList();
-            buildTable();
-        }
-
-        function buildTable() {
-            opcodeTable.innerHTML = "";
-            updateInstructionCount();
-
-            const rows = 1 << opcodeBits;
-
-            const thead = document.createElement("thead");
-            const h1 = document.createElement("tr");
-            h1.innerHTML = `
-                <th colspan="${opcodeBits}">Opcode</th>
-                <th colspan="${regBits.value}">Registers</th>
-                <th colspan="${cpuSignals.length}">CPU Control</th>
-                <th>Mnemonic</th><th>Description</th><th>Pseudocode</th>`;
-            thead.appendChild(h1);
-
-            const h2 = document.createElement("tr");
-            for (let i = opcodeBits - 1; i >= 0; i--) h2.innerHTML += `<th>${i}</th>`;
-            for (let i = 0; i < regBits.value; i++) h2.innerHTML += `<th>R${i}</th>`;
-            cpuSignals.forEach(s => h2.innerHTML += `<th>${s}</th>`);
-            h2.innerHTML += `<th></th><th></th><th></th>`;
-            thead.appendChild(h2);
-            opcodeTable.appendChild(thead);
-
-            const tbody = document.createElement("tbody");
-
-            for (let r = 0; r < rows; r++) {
-                const tr = document.createElement("tr");
-                const bin = r.toString(2).padStart(opcodeBits, "0");
-
-                for (const b of bin) {
-                    const td = document.createElement("td");
-                    td.textContent = b;
-                    td.className = "readonly";
-                    tr.appendChild(td);
-                }
-
-                let col = opcodeBits;
-                for (let i = 0; i < regBits.value; i++, col++)
-                    tr.appendChild(createToggle(r, col));
-                cpuSignals.forEach(() => tr.appendChild(createToggle(r, col++)));
-
-                for (let i = 0; i < 3; i++) {
-                    const td = document.createElement("td");
-                    const inp = document.createElement("input");
-                    const key = `${r}-text-${i}`;
-                    inp.className = "text";
-                    inp.value = cellState[key]?.text || "";
-                    inp.oninput = () => {
-                        cellState[key] = { text: inp.value };
-                        saveState();
-                    };
-                    td.appendChild(inp);
-                    tr.appendChild(td);
-                }
-
-                mergedCells.filter(m => m.row === r).forEach(m => {
-                    const cell = tr.children[m.startCol];
-                    cell.colSpan = m.span;
-                    cell.onclick = () => {
-                        document.querySelectorAll(".merged-selected").forEach(x => x.classList.remove("merged-selected"));
-                        cell.classList.add("merged-selected");
-                        selectedMerge = m;
-                    };
-                    for (let i = 1; i < m.span; i++)
-                        tr.removeChild(tr.children[m.startCol + 1]);
-                });
-
-                tbody.appendChild(tr);
+                td.onclick = () => triToggle(td, key);
+                return td;
             }
 
-            opcodeTable.appendChild(tbody);
-        }
+            document.addEventListener("mouseup", e => {
+                if (dragStartCol === null) return;
+                const td = e.target;
+                if (!td.classList.contains("toggle")) return;
 
-        loadState();
-        rebuild();
-    </script>
+                const tr = td.parentNode;
+                const endCol = [...tr.children].indexOf(td);
+                if (endCol === dragStartCol) return;
+
+                const regStart = opcodeBits;
+                const regEnd = opcodeBits + +regBits.value - 1;
+                const cpuStart = regEnd + 1;
+                const cpuEnd = cpuStart + cpuSignals.length - 1;
+
+                const sameSection =
+                    (dragStartCol >= regStart && endCol <= regEnd) ||
+                    (dragStartCol >= cpuStart && endCol <= cpuEnd);
+
+                if (!sameSection) return;
+
+                const start = Math.min(dragStartCol, endCol);
+                const span = Math.abs(endCol - dragStartCol) + 1;
+
+                if (mergedCells.some(m =>
+                    m.row === dragRow &&
+                    !(start + span <= m.startCol || start >= m.startCol + m.span)
+                )) return;
+
+                mergedCells.push({ row: dragRow, startCol: start, span });
+                dragStartCol = null;
+                saveState();
+                rebuild();
+            });
+
+            document.addEventListener("keydown", e => {
+                if (e.key === "Delete" && selectedMerge) {
+                    mergedCells = mergedCells.filter(m => m !== selectedMerge);
+                    selectedMerge = null;
+                    saveState();
+                    rebuild();
+                }
+
+                if (e.ctrlKey && e.key === "z") {
+                    const prev = undoStack.pop();
+                    if (prev) {
+                        mergedCells = JSON.parse(prev);
+                        saveState();
+                        rebuild();
+                    }
+                }
+            });
+
+            function addCpuSignal() {
+                const n = newCpuName.value.trim();
+                if (!n || cpuSignals.includes(n)) return;
+                cpuSignals.push(n);
+                newCpuName.value = "";
+                saveState();
+                rebuild();
+            }
+
+            function buildCpuList() {
+                cpuList.innerHTML = "";
+                cpuSignals.forEach((s, i) => {
+                    const d = document.createElement("div");
+                    d.className = "cpu-item";
+                    d.textContent = s;
+                    const b = document.createElement("button");
+                    b.textContent = "✕";
+                    b.onclick = () => {
+                        cpuSignals.splice(i, 1);
+                        mergedCells = [];
+                        cellState = {};
+                        saveState();
+                        rebuild();
+                    };
+                    d.appendChild(b);
+                    cpuList.appendChild(d);
+                });
+            }
+
+            function rebuild() {
+                buildCpuList();
+                buildTable();
+            }
+
+            function buildTable() {
+                opcodeTable.innerHTML = "";
+                updateInstructionCount();
+
+                const rows = 1 << opcodeBits;
+
+                const thead = document.createElement("thead");
+                const h1 = document.createElement("tr");
+                h1.innerHTML = `
+                    <th colspan="${opcodeBits}">Opcode</th>
+                    <th colspan="${regBits.value}">Registers</th>
+                    <th colspan="${cpuSignals.length}">CPU Control</th>
+                    <th>Mnemonic</th><th>Description</th><th>Pseudocode</th>`;
+                thead.appendChild(h1);
+
+                const h2 = document.createElement("tr");
+                for (let i = opcodeBits - 1; i >= 0; i--) h2.innerHTML += `<th>${i}</th>`;
+                for (let i = 0; i < regBits.value; i++) h2.innerHTML += `<th>R${i}</th>`;
+                cpuSignals.forEach(s => h2.innerHTML += `<th>${s}</th>`);
+                h2.innerHTML += `<th></th><th></th><th></th>`;
+                thead.appendChild(h2);
+                opcodeTable.appendChild(thead);
+
+                const tbody = document.createElement("tbody");
+
+                for (let r = 0; r < rows; r++) {
+                    const tr = document.createElement("tr");
+                    const bin = r.toString(2).padStart(opcodeBits, "0");
+
+                    for (const b of bin) {
+                        const td = document.createElement("td");
+                        td.textContent = b;
+                        td.className = "readonly";
+                        tr.appendChild(td);
+                    }
+
+                    let col = opcodeBits;
+                    for (let i = 0; i < regBits.value; i++, col++)
+                        tr.appendChild(createToggle(r, col));
+                    cpuSignals.forEach(() => tr.appendChild(createToggle(r, col++)));
+
+                    for (let i = 0; i < 3; i++) {
+                        const td = document.createElement("td");
+                        const inp = document.createElement("input");
+                        const key = `${r}-text-${i}`;
+                        inp.className = "text";
+                        inp.value = cellState[key]?.text || "";
+                        inp.oninput = () => {
+                            cellState[key] = { text: inp.value };
+                            saveState();
+                        };
+                        td.appendChild(inp);
+                        tr.appendChild(td);
+                    }
+
+                    mergedCells.filter(m => m.row === r).forEach(m => {
+                        const cell = tr.children[m.startCol];
+                        cell.colSpan = m.span;
+                        cell.onclick = () => {
+                            document.querySelectorAll(".merged-selected").forEach(x => x.classList.remove("merged-selected"));
+                            cell.classList.add("merged-selected");
+                            selectedMerge = m;
+                        };
+                        for (let i = 1; i < m.span; i++)
+                            tr.removeChild(tr.children[m.startCol + 1]);
+                    });
+
+                    tbody.appendChild(tr);
+                }
+
+                opcodeTable.appendChild(tbody);
+            }
+
+            loadState();
+            rebuild();
+
+            // Boolean Algebra Tool Script
+            // ----------------- Utilities -----------------
+            function highlight(expr) {
+                expr = expr.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                return expr.replace(/[\(\)]/g, m => `<span class="neon-bracket">${m}</span>`)
+                    .replace(/[&|!^]/g, m => `<span class="neon-operator">${m}</span>`)
+                    .replace(/[A-Z]/g, m => `<span class="neon-var">${m}</span>`);
+            }
+            function uniqueSorted(arr) { return Array.from(new Set(arr)).sort(); }
+            function getVars(expr) { let m = expr.match(/[A-Z]/gi); if (!m) return []; return uniqueSorted(m.map(s => s.toUpperCase())); }
+            function safeEvalBool(expr, mapping) {
+                let e = expr.replace(/\s+/g, '').replace(/!/g, '!').replace(/\&/g, '&&').replace(/\|/g, '||').replace(/\^/g, '!=');
+                Object.keys(mapping).forEach(v => { e = e.replace(new RegExp('\\b' + v + '\\b', 'g'), mapping[v] ? 'true' : 'false'); });
+                try { return !!Function('"use strict";return (' + e + ');')(); } catch (err) { throw new Error('Invalid expression'); }
+            }
+
+            // ----------------- Truth table -----------------
+            function generateTruthTable(expr, vars) {
+                const n = vars.length, rows = 1 << n, results = [];
+                for (let i = 0; i < rows; i++) {
+                    const map = {};
+                    for (let j = 0; j < n; j++) map[vars[j]] = !!(i & (1 << (n - j - 1)));
+                    results.push({ map, mapOut: map, out: safeEvalBool(expr, map) });
+                }
+                return results.map(r => ({ map: r.map, out: r.out }));
+            }
+
+            // ----------------- Simplifier -----------------
+            function bitsOf(n, width) { let s = n.toString(2); while (s.length < width) s = '0' + s; return s; }
+            function combineTerms(a, b) { let diff = 0, idx = -1; for (let i = 0; i < a.length; i++) { if (a[i] !== b[i]) { diff++; idx = i; } } if (diff === 1) return a.slice(0, idx) + '-' + a.slice(idx + 1); return null; }
+            function termToMinterms(term) { let res = ['']; for (const ch of term) { if (ch === '0' || ch === '1') { for (let i = 0; i < res.length; i++) res[i] += ch; } else { const copy = res.slice(); for (let i = 0; i < res.length; i++) res[i] += '0'; for (let i = 0; i < copy.length; i++) copy[i] += '1'; res.push(...copy); } } return res.map(s => parseInt(s, 2)); }
+            function qmPrimeImplicants(minterms, nVars) { let groups = {}; minterms.forEach(m => { const bits = bitsOf(m, nVars); const ones = (bits.match(/1/g) || []).length; groups[ones] = groups[ones] || []; groups[ones].push(bits); }); let primeSet = new Set(); let loopGroups = groups; while (true) { let nextGroups = {}; let used = new Set(); let combinedFlag = false; const keys = Object.keys(loopGroups).map(k => parseInt(k)).sort((a, b) => a - b); for (let i = 0; i < keys.length - 1; i++) { const g1 = loopGroups[keys[i]] || []; const g2 = loopGroups[keys[i + 1]] || []; for (const t1 of g1) { for (const t2 of g2) { const combined = combineTerms(t1, t2); if (combined) { combinedFlag = true; used.add(t1); used.add(t2); nextGroups[keys[i]] = nextGroups[keys[i]] || []; if (!nextGroups[keys[i]].includes(combined)) nextGroups[keys[i]].push(combined); } } } } Object.values(loopGroups).flat().forEach(term => { if (!used.has(term)) primeSet.add(term); }); if (!combinedFlag) break; loopGroups = {}; Object.values(nextGroups).flat().forEach(t => { const ones = (t.match(/1/g) || []).length; loopGroups[ones] = loopGroups[ones] || []; if (!loopGroups[ones].includes(t)) loopGroups[ones].push(t); }); } return Array.from(primeSet); }
+            function selectEssentialPrimes(primes, minterms, nVars) { const cover = primes.map(p => ({ term: p, covers: termToMinterms(p).filter(m => minterms.includes(m)) })); const essential = []; const covered = new Set(); for (const m of minterms) { const covering = cover.filter(c => c.covers.includes(m)); if (covering.length === 1) { const t = covering[0].term; if (!essential.includes(t)) essential.push(t); covering[0].covers.forEach(x => covered.add(x)); } } let remaining = minterms.filter(m => !covered.has(m)); while (remaining.length > 0) { let best = null, bestCount = -1; for (const c of cover) { const newcovers = c.covers.filter(m => !covered.has(m)); if (newcovers.length > bestCount) { bestCount = newcovers.length; best = c; } } if (!best || bestCount === 0) break; essential.push(best.term); best.covers.forEach(x => covered.add(x)); remaining = minterms.filter(m => !covered.has(m)); } return uniqueSorted(essential); }
+            function termToExpr(term, vars) { const bits = term.split(''), parts = []; for (let i = 0; i < bits.length; i++) { const b = bits[i]; if (b === '-') continue; parts.push(b === '1' ? vars[i] : '!' + vars[i]); } return parts.length === 0 ? '1' : parts.join(' & '); }
+            function qmSimplify(expr, vars, results) { const n = vars.length; const minterms = []; for (let i = 0; i < results.length; i++) { if (results[i].out) minterms.push(i); } if (minterms.length === 0) return '0'; if (minterms.length === 1 << n) return '1'; const primes = qmPrimeImplicants(minterms, n); const selected = selectEssentialPrimes(primes, minterms, n); if (selected.length === 0) return '0'; return selected.map(p => '(' + termToExpr(p, vars) + ')').join(' | '); }
+
+            // ----------------- K-map -----------------
+            function gray(n) { if (n === 1) return ['0', '1']; const prev = gray(n - 1); return prev.map(x => '0' + x).concat(prev.slice().reverse().map(x => '1' + x)); }
+            function buildKMapGrid(vars, results) { const n = vars.length; if (n < 2 || n > 4) return null; const grid = { rows: 0, cols: 0, cells: [] }; const gray2 = ['00', '01', '11', '10']; if (n === 2) { grid.rows = 2; grid.cols = 2; for (let r = 0; r < 2; r++) { grid.cells[r] = []; for (let c = 0; c < 2; c++) { const map = {}; map[vars[0]] = !!r; map[vars[1]] = !!c; const found = results.find(row => vars.every(v => row.map[v] === map[v])); grid.cells[r][c] = { val: found ? (found.out ? 1 : 0) : 0, minterm: found ? results.indexOf(found) : -1 }; } } return grid; } if (n === 3) { grid.rows = 2; grid.cols = 4; const colsGray = ['00', '01', '11', '10']; for (let r = 0; r < 2; r++) { grid.cells[r] = []; for (let c = 0; c < 4; c++) { const map = {}; map[vars[0]] = !!r; map[vars[1]] = colsGray[c][0] === '1'; map[vars[2]] = colsGray[c][1] === '1'; const found = results.find(row => vars.every(v => row.map[v] === map[v])); grid.cells[r][c] = { val: found ? (found.out ? 1 : 0) : 0, minterm: found ? results.indexOf(found) : -1 }; } } return grid; } if (n === 4) { grid.rows = 4; grid.cols = 4; for (let r = 0; r < 4; r++) { grid.cells[r] = []; for (let c = 0; c < 4; c++) { const map = {}; map[vars[0]] = gray2[r][0] === '1'; map[vars[1]] = gray2[r][1] === '1'; map[vars[2]] = gray2[c][0] === '1'; map[vars[3]] = gray2[c][1] === '1'; const found = results.find(row => vars.every(v => row.map[v] === map[v])); grid.cells[r][c] = { val: found ? (found.out ? 1 : 0) : 0, minterm: found ? results.indexOf(found) : -1 }; } } return grid; } return null; }
+            function allRectanglesForSize(rows, cols, size) { const rects = []; for (let h = 1; h <= rows; h *= 2) { for (let w = 1; w <= cols; w *= 2) { if (h * w === size) rects.push([h, w]); } } return rects; }
+            function findKMapGroups(grid) { const rows = grid.rows, cols = grid.cols, cells = grid.cells; const ones = []; for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (cells[r][c].val === 1) ones.push([r, c]); const covered = Array(rows).fill(0).map(() => Array(cols).fill(false)); const groups = []; const sizes = []; let maxSize = rows * cols; for (let s = 1; s <= maxSize; s *= 2) sizes.push(s); sizes.reverse(); for (const size of sizes) { const rectOptions = allRectanglesForSize(rows, cols, size); for (const [h, w] of rectOptions) { for (let r0 = 0; r0 < rows; r0++) { for (let c0 = 0; c0 < cols; c0++) { let allOne = true; const coords = []; for (let dr = 0; dr < h; dr++) { for (let dc = 0; dc < w; dc++) { const r = (r0 + dr) % rows; const c = (c0 + dc) % cols; coords.push([r, c]); if (cells[r][c].val !== 1) { allOne = false; break; } } if (!allOne) break; } if (allOne) { const key = coords.map(cc => cc.join(',')).sort().join(';'); if (!groups.some(g => g.key === key)) groups.push({ coords, size, h, w, key }); } } } } } groups.sort((a, b) => b.size - a.size); return groups; }
+            function renderKMap(vars, results, container) {
+                container.innerHTML = '';
+                const n = vars.length; if (n < 2 || n > 4) { container.innerHTML = ''; return null; }
+                const grid = buildKMapGrid(vars, results);
+
+                // table
+                const table = document.createElement('table'); table.className = 'kmap-table'; const tbody = document.createElement('tbody');
+                const header = document.createElement('tr'); header.appendChild(document.createElement('th'));
+                const gray2 = ['00', '01', '11', '10'];
+                if (n === 2) { header.appendChild(thCell(vars[1] + '=0')); header.appendChild(thCell(vars[1] + '=1')); }
+                else if (n === 3) { header.appendChild(thCell(vars[1] + vars[2] + '=00')); header.appendChild(thCell('01')); header.appendChild(thCell('11')); header.appendChild(thCell('10')); }
+                else if (n === 4) { header.appendChild(thCell(vars[2] + vars[3] + '=00')); header.appendChild(thCell('01')); header.appendChild(thCell('11')); header.appendChild(thCell('10')); }
+                tbody.appendChild(header);
+
+                if (n === 2) { for (let r = 0; r < 2; r++) { const tr = document.createElement('tr'); tr.appendChild(thCell(vars[0] + '=' + r)); for (let c = 0; c < 2; c++) tr.appendChild(tdCell(grid.cells[r][c].val)); tbody.appendChild(tr); } }
+                else if (n === 3) { for (let r = 0; r < 2; r++) { const tr = document.createElement('tr'); tr.appendChild(thCell(vars[0] + '=' + r)); for (let c = 0; c < 4; c++) tr.appendChild(tdCell(grid.cells[r][c].val)); tbody.appendChild(tr); } }
+                else if (n === 4) { for (let r = 0; r < 4; r++) { const tr = document.createElement('tr'); tr.appendChild(thCell(vars[0] + vars[1] + '=' + gray2[r])); for (let c = 0; c < 4; c++) tr.appendChild(tdCell(grid.cells[r][c].val)); tbody.appendChild(tr); } }
+
+                table.appendChild(tbody); container.appendChild(table);
+
+                const canvas = document.createElement('canvas'); canvas.width = table.offsetWidth; canvas.height = table.offsetHeight; canvas.className = 'kmap-canvas';
+                container.appendChild(canvas);
+                const ctx = canvas.getContext('2d'); ctx.lineWidth = 3;
+
+                const groups = findKMapGroups(grid);
+                const colors = ['rgba(255,0,0,0.18)', 'rgba(0,255,0,0.18)', 'rgba(0,0,255,0.18)', 'rgba(255,255,0,0.18)', 'rgba(0,255,255,0.18)', 'rgba(255,0,255,0.18)'];
+
+                // compute exact cell rects
+                const cellRects = []; for (let r = 0; r < table.rows.length; r++) { cellRects[r] = []; for (let c = 0; c < table.rows[r].cells.length; c++) { const rect = table.rows[r].cells[c].getBoundingClientRect(); const parentRect = table.getBoundingClientRect(); cellRects[r][c] = { x: rect.left - parentRect.left, y: rect.top - parentRect.top, width: rect.width, height: rect.height }; } }
+
+                for (let gi = 0; gi < groups.length; gi++) {
+                    const g = groups[gi]; const color = colors[gi % colors.length];
+                    const rowsArr = g.coords.map(c => c[0]), colsArr = g.coords.map(c => c[1]);
+                    const minRow = Math.min(...rowsArr), maxRow = Math.max(...rowsArr), minCol = Math.min(...colsArr), maxCol = Math.max(...colsArr);
+                    const x = cellRects[minRow + 1][minCol + 1].x, y = cellRects[minRow + 1][minCol + 1].y;
+                    const w = cellRects[maxRow + 1][maxCol + 1].x + cellRects[maxRow + 1][maxCol + 1].width - x;
+                    const h = cellRects[maxRow + 1][maxCol + 1].y + cellRects[maxRow + 1][maxCol + 1].height - y;
+                    ctx.fillStyle = color; ctx.strokeStyle = color.replace('0.18', '0.9') || 'rgba(255,255,255,.9)'; ctx.lineWidth = 3; ctx.fillRect(x, y, w, h); ctx.strokeRect(x, y, w, h);
+                }
+
+                return groups;
+            }
+            function thCell(txt) { const t = document.createElement('th'); t.textContent = txt; return t; }
+            function tdCell(txt) { const t = document.createElement('td'); t.textContent = txt; return t; }
+
+            // ----------------- Button handler -----------------
+            document.getElementById('genBtn').addEventListener('click', () => {
+                const expr = document.getElementById('expr').value.toUpperCase();
+                document.getElementById('highlight').innerHTML = highlight(expr);
+                const vars = getVars(expr);
+                if (vars.length > 4) { alert('Supports max 4 variables.'); return; }
+                const results = generateTruthTable(expr, vars);
+                // table
+                const tbl = document.getElementById('table'); tbl.innerHTML = ''; const ttable = document.createElement('table'); ttable.appendChild(document.createElement('thead')); const thRow = document.createElement('tr'); vars.forEach(v => { const th = document.createElement('th'); th.textContent = v; thRow.appendChild(th); }); thRow.appendChild(document.createElement('th')).textContent = 'OUT'; ttable.querySelector('thead').appendChild(thRow); const tbody = document.createElement('tbody'); results.forEach(r => { const tr = document.createElement('tr'); vars.forEach(v => { const td = document.createElement('td'); td.textContent = r.map[v] ? 1 : 0; tr.appendChild(td); }); const td = document.createElement('td'); td.textContent = r.out ? 1 : 0; tr.appendChild(td); tbody.appendChild(tr); }); ttable.appendChild(tbody); tbl.appendChild(ttable);
+                // K-map
+                const kmapWrap = document.getElementById('kmap'); kmapWrap.innerHTML = ''; const groups = renderKMap(vars, results, kmapWrap);
+                // legend
+                const legendDiv = document.getElementById('legend'); legendDiv.innerHTML = ''; const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#00ffff', '#ff00ff']; groups.forEach((g, i) => { const pill = document.createElement('div'); pill.className = 'group-pill'; pill.style.backgroundColor = colors[i % colors.length]; pill.textContent = 'Group size ' + g.size; legendDiv.appendChild(pill); });
+                // simplified
+                document.getElementById('simplified').textContent = qmSimplify(expr, vars, results);
+            });
+            // Smooth scrolling for sidebar links
+            document.querySelectorAll('.sidebar-link[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    if (targetId === '#') return;
+
+                    const targetElement = document.querySelector(targetId);
+                    if (targetElement) {
+                        window.scrollTo({
+                            top: targetElement.offsetTop - 20,
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+        </script>
+    </div> <!-- Close content-wrapper -->
 </body>
 
 </html>
