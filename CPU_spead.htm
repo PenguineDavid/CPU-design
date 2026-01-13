@@ -397,6 +397,7 @@
             background: #444;
         }
     </style>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
 
 <body>
@@ -425,6 +426,11 @@
                 <a href="https://github.com/PenguineDavid/CPU-design" class="sidebar-link" target="_blank" rel="noopener noreferrer">• Documentation</a>
                 <a href="https://github.com/PenguineDavid" class="sidebar-link" target="_blank" rel="noopener noreferrer">• Author</a>
                 <a href="https://github.com/PenguineDavid/CPU-design?tab=License-1-ov-file" class="sidebar-link" target="_blank" rel="noopener noreferrer">• License</a>
+            </div>
+
+            <div class="sidebar-section">
+                <h4>Data</h4>
+                <button onclick="exportToExcel()">Export ISA to Excel</button>
             </div>
     
             <div class="sidebar-footer">
