@@ -126,7 +126,7 @@ A web-based tool for designing CPU instruction sets and their associated control
 
 ## who it's aimed at
 
-When making this I was aiming to create a tools for people designing new **CPUs**,  
+When making this I was aiming to create a tool for people designing new **CPUs**,  
 I made it as customizable as possible when it comes to the **control ROM**, you can send signals to any custom  
 part of the computer so it can be a Sigle Cycle, Multi Cycle, Risc, Von Neumann, Harvard, Princeton,  
 literaly anything.
