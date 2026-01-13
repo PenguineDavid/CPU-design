@@ -396,6 +396,38 @@
         #sidebar::-webkit-scrollbar-thumb:hover {
             background: #444;
         }
+
+        /* Add this to the CPU Opcode Designer Styles section */
+    .export-btn {
+        background: #111;
+        color: #0ff;
+        border: 1px solid #333;
+        padding: 6px 12px;
+        font-family: monospace;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin: 5px 0;
+    }
+
+    .export-btn:hover {
+        background: #222;
+        border-color: #0ff;
+        box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+    }
+
+    .export-btn:active {
+        transform: translateY(1px);
+    }
+
+    .export-status {
+        color: #0ff;
+        margin: 10px 0;
+        padding: 8px;
+        background: #111;
+        border: 1px solid #333;
+        border-radius: 4px;
+        font-size: 14px;
+    }
     </style>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
@@ -430,7 +462,10 @@
 
             <div class="sidebar-section">
                 <h4>Data</h4>
-                <button onclick="exportToExcel()">Export ISA to Excel</button>
+                <button onclick="exportToExcel()" class="export-btn">
+                    Export ISA to Excel
+                </button>
+                <div class="export-status" id="exportStatus"></div>
             </div>
     
             <div class="sidebar-footer">
@@ -891,6 +926,280 @@
                     }
                 });
             });
+
+            // Excel Export Function Corrected Excel Export Function
+            function exportToExcel() {
+                try {
+                    showExportStatus('Preparing export...', '#0ff');
+
+                    // Create workbook
+                    const wb = XLSX.utils.book_new();
+
+                    // Create ISA data sheet
+                    const isaData = [];
+
+                    // Build proper header structure
+                    const headerRow1 = [];
+                    const headerRow2 = [];
+
+                    // First header row: create merged cell structure
+                    headerRow1.push('Opcode');
+                    for (let i = 1; i < opcodeBits; i++) {
+                        headerRow1.push('');
+                    }
+
+                    headerRow1.push('Registers');
+                    for (let i = 1; i < parseInt(regBits.value); i++) {
+                        headerRow1.push('');
+                    }
+
+                    headerRow1.push('CPU Control');
+                    for (let i = 1; i < cpuSignals.length; i++) {
+                        headerRow1.push('');
+                    }
+
+                    headerRow1.push('Mnemonic', 'Description', 'Pseudocode');
+                    isaData.push(headerRow1);
+
+                    // Second header row: individual column headers
+                    // Opcode bits (MSB to LSB)
+                    for (let i = opcodeBits - 1; i >= 0; i--) {
+                        headerRow2.push(i.toString());
+                    }
+
+                    // Register bits
+                    for (let i = 0; i < parseInt(regBits.value); i++) {
+                        headerRow2.push(`R${i}`);
+                    }
+
+                    // CPU signals
+                    for (let i = 0; i < cpuSignals.length; i++) {
+                        headerRow2.push(cpuSignals[i]);
+                    }
+
+                    // Text columns
+                    headerRow2.push('', '', '');
+                    isaData.push(headerRow2);
+
+                    // Process each instruction
+                    const totalInstructions = 1 << opcodeBits;
+                    for (let row = 0; row < totalInstructions; row++) {
+                        const rowData = [];
+
+                        // Opcode bits (MSB to LSB)
+                        const opcodeBinary = row.toString(2).padStart(opcodeBits, '0');
+                        for (let i = 0; i < opcodeBits; i++) {
+                            rowData.push(opcodeBinary[i]);
+                        }
+
+                        // Register bits
+                        for (let i = 0; i < parseInt(regBits.value); i++) {
+                            const key = `${row}-${opcodeBits + i}`;
+                            rowData.push(cellState[key]?.state || '0');
+                        }
+
+                        // CPU signals
+                        for (let i = 0; i < cpuSignals.length; i++) {
+                            const key = `${row}-${opcodeBits + parseInt(regBits.value) + i}`;
+                            rowData.push(cellState[key]?.state || '0');
+                        }
+
+                        // Text fields
+                        for (let i = 0; i < 3; i++) {
+                            const key = `${row}-text-${i}`;
+                            rowData.push(cellState[key]?.text || '');
+                        }
+
+                        isaData.push(rowData);
+                    }
+
+                    // Create worksheet
+                    const ws = XLSX.utils.aoa_to_sheet(isaData);
+
+                    // Add merged cell ranges for the header
+                    const merge = [];
+
+                    // Opcode header merge (A1: for opcodeBits columns)
+                    if (opcodeBits > 1) {
+                        merge.push({
+                            s: { r: 0, c: 0 },
+                            e: { r: 0, c: opcodeBits - 1 }
+                        });
+                    }
+
+                    // Registers header merge
+                    if (parseInt(regBits.value) > 1) {
+                        merge.push({
+                            s: { r: 0, c: opcodeBits },
+                            e: { r: 0, c: opcodeBits + parseInt(regBits.value) - 1 }
+                        });
+                    }
+
+                    // CPU Control header merge
+                    if (cpuSignals.length > 1) {
+                        merge.push({
+                            s: { r: 0, c: opcodeBits + parseInt(regBits.value) },
+                            e: { r: 0, c: opcodeBits + parseInt(regBits.value) + cpuSignals.length - 1 }
+                        });
+                    }
+
+                    ws['!merges'] = merge;
+
+                    // Style column widths
+                    const colWidths = [];
+                    for (let i = 0; i < isaData[0].length; i++) {
+                        let maxLength = 0;
+                        for (let j = 0; j < isaData.length; j++) {
+                            if (isaData[j][i] && isaData[j][i].toString().length > maxLength) {
+                                maxLength = isaData[j][i].toString().length;
+                            }
+                        }
+                        colWidths.push({ wch: Math.min(maxLength + 2, 30) });
+                    }
+                    ws['!cols'] = colWidths;
+
+                    // Add borders to all cells
+                    const range = XLSX.utils.decode_range(ws['!ref']);
+                    for (let R = range.s.r; R <= range.e.r; ++R) {
+                        for (let C = range.s.c; C <= range.e.c; ++C) {
+                            const cell_address = { c: C, r: R };
+                            const cell_ref = XLSX.utils.encode_cell(cell_address);
+                            if (!ws[cell_ref]) ws[cell_ref] = { t: 's', v: '' };
+                            if (!ws[cell_ref].s) ws[cell_ref].s = {};
+                            ws[cell_ref].s.border = {
+                                top: { style: "thin", color: { rgb: "000000" } },
+                                right: { style: "thin", color: { rgb: "000000" } },
+                                bottom: { style: "thin", color: { rgb: "000000" } },
+                                left: { style: "thin", color: { rgb: "000000" } }
+                            };
+
+                            // Header styling
+                            if (R < 2) {
+                                ws[cell_ref].s.fill = {
+                                    patternType: "solid",
+                                    fgColor: { rgb: "E0E0E0" }
+                                };
+                                ws[cell_ref].s.font = {
+                                    bold: true
+                                };
+                            }
+                        }
+                    }
+
+                    // Add worksheet to workbook
+                    XLSX.utils.book_append_sheet(wb, ws, 'Instruction Set');
+
+                    // Create simplified data view (without merged headers)
+                    const simpleData = [];
+                    const simpleHeaders = [];
+
+                    // Build simple headers
+                    for (let i = opcodeBits - 1; i >= 0; i--) {
+                        simpleHeaders.push(`Op${i}`);
+                    }
+                    for (let i = 0; i < parseInt(regBits.value); i++) {
+                        simpleHeaders.push(`R${i}`);
+                    }
+                    for (const signal of cpuSignals) {
+                        simpleHeaders.push(signal);
+                    }
+                    simpleHeaders.push('Mnemonic', 'Description', 'Pseudocode');
+                    simpleData.push(simpleHeaders);
+
+                    // Add data
+                    for (let row = 0; row < totalInstructions; row++) {
+                        const rowData = [];
+
+                        // Opcode bits
+                        const opcodeBinary = row.toString(2).padStart(opcodeBits, '0');
+                        for (let i = 0; i < opcodeBits; i++) {
+                            rowData.push(opcodeBinary[i]);
+                        }
+
+                        // Register bits
+                        for (let i = 0; i < parseInt(regBits.value); i++) {
+                            const key = `${row}-${opcodeBits + i}`;
+                            rowData.push(cellState[key]?.state || '0');
+                        }
+
+                        // CPU signals
+                        for (let i = 0; i < cpuSignals.length; i++) {
+                            const key = `${row}-${opcodeBits + parseInt(regBits.value) + i}`;
+                            rowData.push(cellState[key]?.state || '0');
+                        }
+
+                        // Text fields
+                        for (let i = 0; i < 3; i++) {
+                            const key = `${row}-text-${i}`;
+                            rowData.push(cellState[key]?.text || '');
+                        }
+
+                        simpleData.push(rowData);
+                    }
+
+                    const simpleWs = XLSX.utils.aoa_to_sheet(simpleData);
+                    XLSX.utils.book_append_sheet(wb, simpleWs, 'Simple View');
+
+                    // Create configuration sheet
+                    const configData = [
+                        ['CPU Design Configuration'],
+                        [''],
+                        ['Export Information'],
+                        ['Generated:', new Date().toLocaleString()],
+                        ['Tool Version:', 'CPU Designer v1.2'],
+                        [''],
+                        ['Design Parameters'],
+                        ['Opcode Bits:', opcodeBits],
+                        ['Register Bits:', regBits.value],
+                        ['Total Instructions:', totalInstructions],
+                        ['Control Signals:', cpuSignals.length],
+                        [''],
+                        ['Signal Names'],
+                        ...cpuSignals.map((signal, idx) => [idx + 1, signal]),
+                        [''],
+                        ['Data Legend'],
+                        ['0 = Signal OFF'],
+                        ['1 = Signal ON'],
+                        ['X = Don\'t Care'],
+                        [''],
+                        ['Sheet Information'],
+                        ['1. Instruction Set: Full table with headers matching the UI'],
+                        ['2. Simple View: Clean data without merged headers'],
+                        ['3. Configuration: This sheet']
+                    ];
+
+                    const configWs = XLSX.utils.aoa_to_sheet(configData);
+                    XLSX.utils.book_append_sheet(wb, configWs, 'Configuration');
+
+                    // Save file
+                    const fileName = `CPU_ISA_${new Date().toISOString().split('T')[0]}.xlsx`;
+                    XLSX.writeFile(wb, fileName);
+
+                    showExportStatus('Export completed successfully!', '#0f0');
+
+                    // Clear success message after 3 seconds
+                    setTimeout(() => {
+                        const statusDiv = document.getElementById('exportStatus');
+                        if (statusDiv) {
+                            statusDiv.textContent = '';
+                            statusDiv.style.color = '#0ff';
+                        }
+                    }, 3000);
+
+                } catch (error) {
+                    console.error('Export error:', error);
+                    showExportStatus('Error during export: ' + error.message, '#f00');
+                }
+            }
+
+            // Helper function to show export status
+            function showExportStatus(message, color) {
+                const statusDiv = document.getElementById('exportStatus');
+                if (statusDiv) {
+                    statusDiv.textContent = message;
+                    statusDiv.style.color = color;
+                }
+            }
         </script>
     </div> <!-- Close content-wrapper -->
 </body>
