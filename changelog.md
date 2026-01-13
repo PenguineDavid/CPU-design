@@ -1,6 +1,6 @@
 # Change log  
 
-CPU Opcode & Control Word DesignerA web-based tool for designing CPU instruction sets and their associated control signals. Allows users to define opcode widths, register bits, and CPU control signals, with real-time updates and full state persistence across browser sessions.
+CPU Opcode & Control Word Designer A web-based tool for designing CPU instruction sets and their associated control signals. Allows users to define opcode widths, register bits, and CPU control signals, with real-time updates and full state persistence across browser sessions.
 
 ---
 
