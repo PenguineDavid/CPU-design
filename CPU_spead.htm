@@ -13,19 +13,14 @@
             padding: 15px;
         }
 
-        h2 {
-            margin-top: 0;
-        }
-
         .controls {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
             gap: 10px;
-            margin-bottom: 15px;
         }
 
-        .controls input,
-        .controls button {
+        input,
+        button {
             background: #111;
             color: #0ff;
             border: 1px solid #333;
@@ -34,16 +29,7 @@
         }
 
         button {
-            cursor: pointer;
-        }
-
-        button:hover {
-            background: #222;
-        }
-
-        .opcode-control {
-            display: flex;
-            gap: 6px;
+            cursor: pointer
         }
 
         table {
@@ -51,51 +37,45 @@
             width: 100%;
         }
 
-        th,
-        td {
+        td,
+        th {
             border: 1px solid #333;
             text-align: center;
             padding: 4px;
-            font-size: 13px;
         }
 
         th {
-            background: #111;
+            background: #111
         }
 
         .toggle {
-            width: 26px;
             cursor: pointer;
             user-select: none;
         }
 
-        .toggle.zero {
+        .zero {
             background: #000;
-            color: #fff;
+            color: #fff
         }
 
-        .toggle.one {
+        .one {
             background: #fff;
-            color: #000;
+            color: #000
         }
 
-        .toggle.x {
+        .x {
             background: #222;
-            color: #0ff;
+            color: #0ff
         }
 
-        .toggle.readonly {
+        .readonly {
+            background: #111;
             cursor: default;
-            background: #111;
-            color: #0ff;
         }
 
-        input.text {
-            width: 100%;
-            background: #111;
-            color: #0ff;
-            border: none;
-            font-family: monospace;
+        /* ADDITION */
+        .merged-selected {
+            outline: 2px solid #0ff;
         }
 
         .scroll {
@@ -116,43 +96,44 @@
         }
 
         .cpu-item button {
-            margin-left: 6px;
+            margin-left: 6px
+        }
+
+        input.text {
+            width: 100%;
+            border: none;
+            background: #111;
+            color: #0ff;
         }
     </style>
 </head>
 
 <body>
 
-    <h2>CPU Opcode & CPU Control Word Designer</h2>
+    <h2>CPU Opcode & Control Word Designer</h2>
 
     <div class="controls">
-
-        <label>
-            Opcode bit-width
-            <div class="opcode-control">
+        <label>Opcode bits
+            <div>
                 <button onclick="changeOpcodeBits(-1)">÷2</button>
                 <input id="opcodeBits" value="4" readonly>
                 <button onclick="changeOpcodeBits(1)">×2</button>
             </div>
         </label>
 
-        <label>
-            Instruction count
+        <label>Instruction count
             <input id="instructionCount" readonly>
         </label>
 
-        <label>
-            Register select bits
+        <label>Register bits
             <input type="number" id="regBits" value="3" min="0">
         </label>
-
     </div>
 
     <h3>CPU Control Signals</h3>
-
     <div class="cpu-list" id="cpuList"></div>
 
-    <div style="margin-top:6px">
+    <div>
         <input id="newCpuName" placeholder="New signal name (e.g. CIN)">
         <button onclick="addCpuSignal()">Add CPU Signal</button>
     </div>
@@ -164,192 +145,236 @@
     </div>
 
     <script>
-        let opcodeBits = 4;
+        const STORAGE_KEY = "cpu_opcode_designer_state";
 
-        let cpuSignals = [
-            "EN", "!A", "!B", "CIN", "XOR", "OR", "FC", "LSH", "RSH", "PUS", "POP"
-        ];
+        const opcodeBitsInput = document.getElementById("opcodeBits");
+        const instructionCount = document.getElementById("instructionCount");
+        const regBits = document.getElementById("regBits");
+        const opcodeTable = document.getElementById("opcodeTable");
+        const cpuList = document.getElementById("cpuList");
+        const newCpuName = document.getElementById("newCpuName");
+
+        let opcodeBits = 4;
+        let cpuSignals = ["EN", "!A", "!B", "CIN", "XOR", "OR", "FC", "PUSH", "POP", "CAL", "RET", "HLT"];
+        let mergedCells = [];
+        let undoStack = [];
+        let cellState = {};
+
+        let dragStartCol = null;
+        let dragRow = null;
+
+        /* ADDITION */
+        let selectedMerge = null;
 
         function saveState() {
-            const state = {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
                 opcodeBits,
-                regBits: document.getElementById("regBits").value,
+                regBits: regBits.value,
                 cpuSignals,
-                table: []
-            };
-
-            document.querySelectorAll("#opcodeTable tbody tr").forEach(tr => {
-                const row = [];
-                tr.querySelectorAll("td").forEach(td => {
-                    if (td.dataset.state !== undefined) row.push(td.dataset.state);
-                    else if (td.querySelector("input")) row.push(td.querySelector("input").value);
-                });
-                state.table.push(row);
-            });
-
-            localStorage.setItem("cpuDesignerState", JSON.stringify(state));
+                mergedCells,
+                cellState
+            }));
         }
 
         function loadState() {
-            const raw = localStorage.getItem("cpuDesignerState");
-            if (!raw) return;
-
-            const state = JSON.parse(raw);
-            opcodeBits = state.opcodeBits;
-            cpuSignals = state.cpuSignals;
-
-            document.getElementById("opcodeBits").value = opcodeBits;
-            document.getElementById("regBits").value = state.regBits;
-
-            updateInstructionCount();
-            buildCpuList();
-            buildTable();
-
-            const rows = state.table || [];
-            document.querySelectorAll("#opcodeTable tbody tr").forEach((tr, r) => {
-                const row = rows[r];
-                if (!row) return;
-                let i = 0;
-                tr.querySelectorAll("td").forEach(td => {
-                    if (td.dataset.state !== undefined) {
-                        td.dataset.state = row[i];
-                        td.textContent = row[i];
-                        td.className = "toggle " + (row[i] === "1" ? "one" : row[i] === "X" ? "x" : "zero");
-                        i++;
-                    } else if (td.querySelector("input")) {
-                        td.querySelector("input").value = row[i++] || "";
-                    }
-                });
-            });
+            const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+            if (!s) return;
+            opcodeBits = s.opcodeBits;
+            opcodeBitsInput.value = opcodeBits;
+            regBits.value = s.regBits;
+            cpuSignals = s.cpuSignals;
+            mergedCells = s.mergedCells;
+            cellState = s.cellState || {};
         }
 
         function updateInstructionCount() {
-            document.getElementById("instructionCount").value = 1 << opcodeBits;
+            instructionCount.value = 1 << opcodeBits;
         }
 
-        function changeOpcodeBits(delta) {
-            opcodeBits = Math.max(1, opcodeBits + delta);
-            document.getElementById("opcodeBits").value = opcodeBits;
-            updateInstructionCount();
-            buildTable();
+        function changeOpcodeBits(d) {
+            opcodeBits = Math.max(1, opcodeBits + d);
+            opcodeBitsInput.value = opcodeBits;
+            mergedCells = [];
+            cellState = {};
+            saveState();
+            rebuild();
+        }
+
+        function triToggle(td, key) {
+            td.dataset.state =
+                td.dataset.state === "0" ? "1" :
+                    td.dataset.state === "1" ? "X" : "0";
+            updateToggle(td);
+            cellState[key] = { state: td.dataset.state };
             saveState();
         }
 
-        function triToggle(td) {
-            const s = td.dataset.state;
-            const next = s === "0" ? "1" : s === "1" ? "X" : "0";
-            td.dataset.state = next;
-            td.textContent = next;
-            td.className = "toggle " + (next === "1" ? "one" : next === "X" ? "x" : "zero");
+        function updateToggle(td) {
+            td.textContent = td.dataset.state;
+            td.className = "toggle " +
+                (td.dataset.state === "1" ? "one" :
+                    td.dataset.state === "X" ? "x" : "zero");
+        }
+
+        function createToggle(row, col) {
+            const td = document.createElement("td");
+            const key = `${row}-${col}`;
+            td.dataset.state = cellState[key]?.state || "0";
+            updateToggle(td);
+
+            td.onmousedown = e => {
+                dragRow = row;
+                dragStartCol = col;
+                undoStack.push(JSON.stringify(mergedCells));
+                e.preventDefault();
+            };
+
+            td.onclick = () => triToggle(td, key);
+            return td;
+        }
+
+        document.addEventListener("mouseup", e => {
+            if (dragStartCol === null) return;
+            const td = e.target;
+            if (!td.classList.contains("toggle")) return;
+
+            const tr = td.parentNode;
+            const endCol = [...tr.children].indexOf(td);
+            if (endCol === dragStartCol) return;
+
+            const regStart = opcodeBits;
+            const regEnd = opcodeBits + +regBits.value - 1;
+            const cpuStart = regEnd + 1;
+            const cpuEnd = cpuStart + cpuSignals.length - 1;
+
+            const sameSection =
+                (dragStartCol >= regStart && endCol <= regEnd) ||
+                (dragStartCol >= cpuStart && endCol <= cpuEnd);
+
+            if (!sameSection) return;
+
+            const start = Math.min(dragStartCol, endCol);
+            const span = Math.abs(endCol - dragStartCol) + 1;
+
+            if (mergedCells.some(m =>
+                m.row === dragRow &&
+                !(start + span <= m.startCol || start >= m.startCol + m.span)
+            )) return;
+
+            mergedCells.push({ row: dragRow, startCol: start, span });
+            dragStartCol = null;
             saveState();
-        }
+            rebuild();
+        });
 
-        function createToggle() {
-            const td = document.createElement("td");
-            td.dataset.state = "0";
-            td.textContent = "0";
-            td.className = "toggle zero";
-            td.onclick = () => triToggle(td);
-            return td;
-        }
+        /* ADDITION */
+        document.addEventListener("keydown", e => {
+            if ((e.key === "Delete" || e.key === "Backspace") && selectedMerge) {
+                mergedCells = mergedCells.filter(m => m !== selectedMerge);
+                selectedMerge = null;
+                saveState();
+                rebuild();
+            }
+        });
 
-        function createOpcodeBit(bit) {
-            const td = document.createElement("td");
-            td.textContent = bit;
-            td.className = "toggle readonly";
-            return td;
-        }
-
-        function createTextCell() {
-            const td = document.createElement("td");
-            const input = document.createElement("input");
-            input.className = "text";
-            input.oninput = saveState;
-            td.appendChild(input);
-            return td;
+        function addCpuSignal() {
+            const n = newCpuName.value.trim();
+            if (!n || cpuSignals.includes(n)) return;
+            cpuSignals.push(n);
+            newCpuName.value = "";
+            mergedCells = [];
+            cellState = {};
+            saveState();
+            rebuild();
         }
 
         function buildCpuList() {
-            const list = document.getElementById("cpuList");
-            list.innerHTML = "";
-            cpuSignals.forEach((sig, i) => {
-                const div = document.createElement("div");
-                div.className = "cpu-item";
-                div.textContent = sig;
-                const btn = document.createElement("button");
-                btn.textContent = "✕";
-                btn.onclick = () => {
+            cpuList.innerHTML = "";
+            cpuSignals.forEach((s, i) => {
+                const d = document.createElement("div");
+                d.className = "cpu-item";
+                d.textContent = s;
+                const b = document.createElement("button");
+                b.textContent = "✕";
+                b.onclick = () => {
                     cpuSignals.splice(i, 1);
-                    buildAluList();
-                    buildTable();
+                    mergedCells = [];
+                    cellState = {};
                     saveState();
+                    rebuild();
                 };
-                div.appendChild(btn);
-                list.appendChild(div);
+                d.appendChild(b);
+                cpuList.appendChild(d);
             });
         }
 
-        function addCpuSignal() {
-            const name = document.getElementById("newCpuName").value.trim();
-            if (!name || cpuSignals.includes(name)) return;
-            cpuSignals.push(name);
-            document.getElementById("newCpuName").value = "";
+        function rebuild() {
             buildCpuList();
             buildTable();
-            saveState();
         }
 
         function buildTable() {
-            const regBits = +document.getElementById("regBits").value;
+            opcodeTable.innerHTML = "";
+            updateInstructionCount();
+
             const rows = 1 << opcodeBits;
-
-            const table = document.getElementById("opcodeTable");
-            table.innerHTML = "";
-
-            const thead = document.createElement("thead");
-            const h1 = document.createElement("tr");
-
-            h1.innerHTML += `<th colspan="${opcodeBits}">Opcode</th>`;
-            if (regBits) h1.innerHTML += `<th colspan="${regBits}">Registers</th>`;
-            if (cpuSignals.length) h1.innerHTML += `<th colspan="${cpuSignals.length}">CPU Control</th>`;
-            h1.innerHTML += `<th>Mnemonic</th><th>Description</th><th>Pseudocode</th>`;
-            thead.appendChild(h1);
-
-            const h2 = document.createElement("tr");
-            for (let i = opcodeBits - 1; i >= 0; i--) h2.innerHTML += `<th>${i}</th>`;
-            for (let i = 0; i < regBits; i++) h2.innerHTML += `<th>R${i}</th>`;
-            cpuSignals.forEach(s => h2.innerHTML += `<th>${s}</th>`);
-            h2.innerHTML += `<th></th><th></th><th></th>`;
-            thead.appendChild(h2);
-
-            table.appendChild(thead);
-
             const tbody = document.createElement("tbody");
 
-            for (let row = 0; row < rows; row++) {
+            for (let r = 0; r < rows; r++) {
                 const tr = document.createElement("tr");
-                const bin = row.toString(2).padStart(opcodeBits, "0");
+                const bin = r.toString(2).padStart(opcodeBits, "0");
 
-                for (const b of bin) tr.appendChild(createOpcodeBit(b));
-                for (let i = 0; i < regBits; i++) tr.appendChild(createToggle());
-                cpuSignals.forEach(() => tr.appendChild(createToggle()));
+                for (const b of bin) {
+                    const td = document.createElement("td");
+                    td.textContent = b;
+                    td.className = "readonly";
+                    tr.appendChild(td);
+                }
 
-                tr.appendChild(createTextCell());
-                tr.appendChild(createTextCell());
-                tr.appendChild(createTextCell());
+                let col = opcodeBits;
+                for (let i = 0; i < regBits.value; i++, col++)
+                    tr.appendChild(createToggle(r, col));
+                cpuSignals.forEach(() => tr.appendChild(createToggle(r, col++)));
+
+                for (let i = 0; i < 3; i++) {
+                    const td = document.createElement("td");
+                    const inp = document.createElement("input");
+                    const key = `${r}-text-${i}`;
+                    inp.className = "text";
+                    inp.value = cellState[key]?.text || "";
+                    inp.oninput = () => {
+                        cellState[key] = { text: inp.value };
+                        saveState();
+                    };
+                    td.appendChild(inp);
+                    tr.appendChild(td);
+                }
+
+                mergedCells.filter(m => m.row === r).forEach(m => {
+                    const cell = tr.children[m.startCol];
+                    cell.colSpan = m.span;
+
+                    /* ADDITION */
+                    cell.onclick = () => {
+                        document.querySelectorAll(".merged-selected")
+                            .forEach(c => c.classList.remove("merged-selected"));
+                        cell.classList.add("merged-selected");
+                        selectedMerge = m;
+                    };
+
+                    for (let i = 1; i < m.span; i++)
+                        tr.removeChild(tr.children[m.startCol + 1]);
+                });
 
                 tbody.appendChild(tr);
             }
 
-            table.appendChild(tbody);
+            opcodeTable.appendChild(tbody);
         }
 
-        updateInstructionCount();
-        buildCpuList();
-        buildTable();
         loadState();
+        rebuild();
     </script>
-
 </body>
 
 </html>
