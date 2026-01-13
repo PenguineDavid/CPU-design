@@ -73,11 +73,6 @@
             cursor: default;
         }
 
-        /* ADDITION */
-        .merged-selected {
-            outline: 2px solid #0ff;
-        }
-
         .scroll {
             max-height: 70vh;
             overflow: auto;
@@ -104,6 +99,10 @@
             border: none;
             background: #111;
             color: #0ff;
+        }
+
+        .merged-selected {
+            outline: 2px solid #0ff;
         }
     </style>
 </head>
@@ -162,8 +161,6 @@
 
         let dragStartCol = null;
         let dragRow = null;
-
-        /* ADDITION */
         let selectedMerge = null;
 
         function saveState() {
@@ -183,7 +180,7 @@
             opcodeBitsInput.value = opcodeBits;
             regBits.value = s.regBits;
             cpuSignals = s.cpuSignals;
-            mergedCells = s.mergedCells;
+            mergedCells = s.mergedCells || [];
             cellState = s.cellState || {};
         }
 
@@ -267,13 +264,21 @@
             rebuild();
         });
 
-        /* ADDITION */
         document.addEventListener("keydown", e => {
-            if ((e.key === "Delete" || e.key === "Backspace") && selectedMerge) {
+            if (e.key === "Delete" && selectedMerge) {
                 mergedCells = mergedCells.filter(m => m !== selectedMerge);
                 selectedMerge = null;
                 saveState();
                 rebuild();
+            }
+
+            if (e.ctrlKey && e.key === "z") {
+                const prev = undoStack.pop();
+                if (prev) {
+                    mergedCells = JSON.parse(prev);
+                    saveState();
+                    rebuild();
+                }
             }
         });
 
@@ -282,8 +287,6 @@
             if (!n || cpuSignals.includes(n)) return;
             cpuSignals.push(n);
             newCpuName.value = "";
-            mergedCells = [];
-            cellState = {};
             saveState();
             rebuild();
         }
@@ -318,6 +321,24 @@
             updateInstructionCount();
 
             const rows = 1 << opcodeBits;
+
+            const thead = document.createElement("thead");
+            const h1 = document.createElement("tr");
+            h1.innerHTML = `
+                <th colspan="${opcodeBits}">Opcode</th>
+                <th colspan="${regBits.value}">Registers</th>
+                <th colspan="${cpuSignals.length}">CPU Control</th>
+                <th>Mnemonic</th><th>Description</th><th>Pseudocode</th>`;
+            thead.appendChild(h1);
+
+            const h2 = document.createElement("tr");
+            for (let i = opcodeBits - 1; i >= 0; i--) h2.innerHTML += `<th>${i}</th>`;
+            for (let i = 0; i < regBits.value; i++) h2.innerHTML += `<th>R${i}</th>`;
+            cpuSignals.forEach(s => h2.innerHTML += `<th>${s}</th>`);
+            h2.innerHTML += `<th></th><th></th><th></th>`;
+            thead.appendChild(h2);
+            opcodeTable.appendChild(thead);
+
             const tbody = document.createElement("tbody");
 
             for (let r = 0; r < rows; r++) {
@@ -353,15 +374,11 @@
                 mergedCells.filter(m => m.row === r).forEach(m => {
                     const cell = tr.children[m.startCol];
                     cell.colSpan = m.span;
-
-                    /* ADDITION */
                     cell.onclick = () => {
-                        document.querySelectorAll(".merged-selected")
-                            .forEach(c => c.classList.remove("merged-selected"));
+                        document.querySelectorAll(".merged-selected").forEach(x => x.classList.remove("merged-selected"));
                         cell.classList.add("merged-selected");
                         selectedMerge = m;
                     };
-
                     for (let i = 1; i < m.span; i++)
                         tr.removeChild(tr.children[m.startCol + 1]);
                 });
