@@ -7,8 +7,9 @@
 
     <style>
         body {
-            background: rgb(0, 0,0)
+            background: rgb(0, 0, 0)
         }
+
         /* CPU Opcode Designer Styles */
         #spreadsheet {
             background: #0b0b0b;
@@ -367,14 +368,16 @@
 
         /* Main Content Wrapper */
         #content-wrapper {
-            margin-left: 260px; /* Same as sidebar width */
+            margin-left: 260px;
+            /* Same as sidebar width */
             padding: 20px;
             min-height: 100vh;
             background: #000000;
         }
 
         /* Existing sections styling adjustment */
-        #spreadsheet, #boolean-tool {
+        #spreadsheet,
+        #boolean-tool {
             margin-bottom: 30px;
             max-width: calc(100% - 40px);
         }
@@ -398,36 +401,36 @@
         }
 
         /* Add this to the CPU Opcode Designer Styles section */
-    .export-btn {
-        background: #111;
-        color: #0ff;
-        border: 1px solid #333;
-        padding: 6px 12px;
-        font-family: monospace;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        margin: 5px 0;
-    }
+        .export-btn {
+            background: #111;
+            color: #0ff;
+            border: 1px solid #333;
+            padding: 6px 12px;
+            font-family: monospace;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin: 5px 0;
+        }
 
-    .export-btn:hover {
-        background: #222;
-        border-color: #0ff;
-        box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
-    }
+        .export-btn:hover {
+            background: #222;
+            border-color: #0ff;
+            box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+        }
 
-    .export-btn:active {
-        transform: translateY(1px);
-    }
+        .export-btn:active {
+            transform: translateY(1px);
+        }
 
-    .export-status {
-        color: #0ff;
-        margin: 10px 0;
-        padding: 8px;
-        background: #111;
-        border: 1px solid #333;
-        border-radius: 4px;
-        font-size: 14px;
-    }
+        .export-status {
+            color: #0ff;
+            margin: 10px 0;
+            padding: 8px;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 4px;
+            font-size: 14px;
+        }
     </style>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
@@ -438,26 +441,29 @@
         <h3>Navigation</h3>
         <div class="sidebar-content">
             <p class="sidebar-text">Welcome to the CPU Designer Tool</p>
-    
+
             <div class="sidebar-section">
                 <h4>CPU Designer</h4>
                 <a href="#spreadsheet" class="sidebar-link">• Opcode Designer</a>
                 <a href="#controls" class="sidebar-link">• Control Signals</a>
                 <a href="#instructions" class="sidebar-link">• Instruction Set</a>
             </div>
-    
+
             <div class="sidebar-section">
                 <h4>Boolean Algebra</h4>
                 <a href="#boolean-tool" class="sidebar-link">• Boolean Tool</a>
                 <a href="#table" class="sidebar-link">• Truth Table</a>
                 <a href="#kmap" class="sidebar-link">• K-Map Viewer</a>
             </div>
-    
+
             <div class="sidebar-section">
                 <h4>Quick Links</h4>
-                <a href="https://github.com/PenguineDavid/CPU-design" class="sidebar-link" target="_blank" rel="noopener noreferrer">• Documentation</a>
-                <a href="https://github.com/PenguineDavid" class="sidebar-link" target="_blank" rel="noopener noreferrer">• Author</a>
-                <a href="https://github.com/PenguineDavid/CPU-design?tab=License-1-ov-file" class="sidebar-link" target="_blank" rel="noopener noreferrer">• License</a>
+                <a href="https://github.com/PenguineDavid/CPU-design" class="sidebar-link" target="_blank"
+                    rel="noopener noreferrer">• Documentation</a>
+                <a href="https://github.com/PenguineDavid" class="sidebar-link" target="_blank"
+                    rel="noopener noreferrer">• Author</a>
+                <a href="https://github.com/PenguineDavid/CPU-design?tab=License-1-ov-file" class="sidebar-link"
+                    target="_blank" rel="noopener noreferrer">• License</a>
             </div>
 
             <div class="sidebar-section">
@@ -467,7 +473,7 @@
                 </button>
                 <div class="export-status" id="exportStatus"></div>
             </div>
-    
+
             <div class="sidebar-footer">
                 <p class="sidebar-text small">CPU Designer v1.2</p>
                 <p class="sidebar-text small">Boolean Algebra Tool</p>
@@ -570,7 +576,7 @@
             const newCpuName = document.getElementById("newCpuName");
 
             let opcodeBits = 4;
-            let cpuSignals = ["EN", "!A", "!B", "CIN", "XOR", "OR", "FC", "PUSH", "POP", "CAL", "RET", "HLT"];
+            let cpuSignals = ["EN", "!A", "!B", "CIN", "X>R", "FC", "PUSH", "POP", "CAL", "RET", "HLT"];
             let mergedCells = [];
             let undoStack = [];
             let cellState = {};
@@ -596,7 +602,17 @@
                 opcodeBitsInput.value = opcodeBits;
                 regBits.value = s.regBits;
                 cpuSignals = s.cpuSignals;
-                mergedCells = s.mergedCells || [];
+
+                // Filter out merged cells that are not in the register section
+                const regStart = opcodeBits;
+                const regEnd = opcodeBits + parseInt(s.regBits || regBits.value) - 1;
+
+                mergedCells = (s.mergedCells || []).filter(merge => {
+                    // Only keep merges in the register section
+                    return merge.startCol >= regStart &&
+                        (merge.startCol + merge.span - 1) <= regEnd;
+                });
+
                 cellState = s.cellState || {};
             }
 
@@ -605,10 +621,65 @@
             }
 
             function changeOpcodeBits(d) {
+                const oldOpcodeBits = opcodeBits;
+                const oldRegStart = opcodeBits;
+                const oldRegEnd = opcodeBits + parseInt(regBits.value) - 1;
+
                 opcodeBits = Math.max(1, opcodeBits + d);
                 opcodeBitsInput.value = opcodeBits;
-                mergedCells = [];
-                cellState = {};
+
+                const newRegStart = opcodeBits;
+                const delta = opcodeBits - oldOpcodeBits; // Positive when adding, negative when removing
+
+                // Update merged cells positions
+                mergedCells = mergedCells.map(m => {
+                    // If the merged cell is in the register section
+                    if (m.startCol >= oldRegStart && m.startCol <= oldRegEnd) {
+                        return {
+                            ...m,
+                            startCol: m.startCol + delta
+                        };
+                    }
+                    return m;
+                });
+
+                // Update cellState keys for register and control signal cells
+                const newCellState = {};
+                for (let key in cellState) {
+                    const match = key.match(/^(\d+)-(\d+)$/);
+                    if (match) {
+                        let row = parseInt(match[1]);
+                        let col = parseInt(match[2]);
+
+                        // If this cell is in the register or control signal section (after opcode bits)
+                        if (col >= oldRegStart) {
+                            col += delta;
+                        }
+
+                        newCellState[`${row}-${col}`] = cellState[key];
+                    } else {
+                        // This is a text field (key format: `${row}-text-${i}`)
+                        newCellState[key] = cellState[key];
+                    }
+                }
+
+                // If decreasing opcode bits, remove data for instructions that no longer exist
+                if (opcodeBits < oldOpcodeBits) {
+                    const newMaxRows = 1 << opcodeBits;
+
+                    // Clear cellState for rows beyond new max
+                    for (const key in newCellState) {
+                        const match = key.match(/^(\d+)-/);
+                        if (match && parseInt(match[1]) >= newMaxRows) {
+                            delete newCellState[key];
+                        }
+                    }
+
+                    // Clear mergedCells for rows beyond new max
+                    mergedCells = mergedCells.filter(m => m.row < newMaxRows);
+                }
+
+                cellState = newCellState;
                 saveState();
                 rebuild();
             }
@@ -642,39 +713,79 @@
                     e.preventDefault();
                 };
 
-                td.onclick = () => triToggle(td, key);
+                td.onclick = () => {
+                    // Check if this cell is part of a merged cell
+                    const merge = mergedCells.find(m =>
+                        m.row === row &&
+                        col >= m.startCol &&
+                        col < m.startCol + m.span
+                    );
+
+                    if (merge) {
+                        // Clicking anywhere in merged cell selects it
+                        const cell = document.querySelectorAll(`#opcodeTable tr:nth-child(${row + 2}) td`)[merge.startCol];
+                        document.querySelectorAll(".merged-selected").forEach(x => x.classList.remove("merged-selected"));
+                        if (cell) {
+                            cell.classList.add("merged-selected");
+                            selectedMerge = merge;
+                        }
+                    } else {
+                        triToggle(td, key);
+                    }
+                };
+
                 return td;
             }
 
             document.addEventListener("mouseup", e => {
                 if (dragStartCol === null) return;
+
                 const td = e.target;
                 if (!td.classList.contains("toggle")) return;
 
                 const tr = td.parentNode;
-                const endCol = [...tr.children].indexOf(td);
+                const row = Array.from(opcodeTable.querySelectorAll('tbody tr')).indexOf(tr);
+                const endCol = Array.from(tr.children).indexOf(td);
+
                 if (endCol === dragStartCol) return;
 
                 const regStart = opcodeBits;
-                const regEnd = opcodeBits + +regBits.value - 1;
-                const cpuStart = regEnd + 1;
-                const cpuEnd = cpuStart + cpuSignals.length - 1;
+                const regEnd = opcodeBits + parseInt(regBits.value) - 1;
 
-                const sameSection =
-                    (dragStartCol >= regStart && endCol <= regEnd) ||
-                    (dragStartCol >= cpuStart && endCol <= cpuEnd);
+                // Calculate actual column indices (accounting for colSpan)
+                let actualStartCol = dragStartCol;
+                let actualEndCol = endCol;
 
-                if (!sameSection) return;
+                // Adjust for any merged cells in the row
+                mergedCells.filter(m => m.row === row).forEach(m => {
+                    if (m.startCol < dragStartCol && dragStartCol < m.startCol + m.span) {
+                        actualStartCol = m.startCol;
+                    }
+                    if (m.startCol < endCol && endCol < m.startCol + m.span) {
+                        actualEndCol = m.startCol;
+                    }
+                });
 
-                const start = Math.min(dragStartCol, endCol);
-                const span = Math.abs(endCol - dragStartCol) + 1;
+                const start = Math.min(actualStartCol, actualEndCol);
+                const end = Math.max(actualStartCol, actualEndCol);
+                const span = end - start + 1;
 
-                if (mergedCells.some(m =>
-                    m.row === dragRow &&
-                    !(start + span <= m.startCol || start >= m.startCol + m.span)
-                )) return;
+                // ONLY allow merging in the register section
+                const inRegisterSection =
+                    (start >= regStart && start <= regEnd) &&
+                    (end >= regStart && end <= regEnd);
 
-                mergedCells.push({ row: dragRow, startCol: start, span });
+                if (!inRegisterSection) return;
+
+                // Check for overlap with existing merges
+                const overlap = mergedCells.some(m =>
+                    m.row === row &&
+                    !(end < m.startCol || start > m.startCol + m.span - 1)
+                );
+
+                if (overlap) return;
+
+                mergedCells.push({ row: row, startCol: start, span });
                 dragStartCol = null;
                 saveState();
                 rebuild();
@@ -703,6 +814,7 @@
                 if (!n || cpuSignals.includes(n)) return;
                 cpuSignals.push(n);
                 newCpuName.value = "";
+
                 saveState();
                 rebuild();
             }
@@ -717,8 +829,7 @@
                     b.textContent = "✕";
                     b.onclick = () => {
                         cpuSignals.splice(i, 1);
-                        mergedCells = [];
-                        cellState = {};
+
                         saveState();
                         rebuild();
                     };
@@ -737,14 +848,16 @@
                 updateInstructionCount();
 
                 const rows = 1 << opcodeBits;
+                const regStart = opcodeBits;
+                const regEnd = opcodeBits + parseInt(regBits.value) - 1;
 
                 const thead = document.createElement("thead");
                 const h1 = document.createElement("tr");
                 h1.innerHTML = `
-                    <th colspan="${opcodeBits}">Opcode</th>
-                    <th colspan="${regBits.value}">Registers</th>
-                    <th colspan="${cpuSignals.length}">CPU Control</th>
-                    <th>Mnemonic</th><th>Description</th><th>Pseudocode</th>`;
+    <th colspan="${opcodeBits}">Opcode</th>
+    <th colspan="${regBits.value}">Registers</th>
+    <th colspan="${cpuSignals.length}">CPU Control</th>
+    <th>Mnemonic</th><th>Description</th><th>Pseudocode</th>`;
                 thead.appendChild(h1);
 
                 const h2 = document.createElement("tr");
@@ -769,8 +882,10 @@
                     }
 
                     let col = opcodeBits;
-                    for (let i = 0; i < regBits.value; i++, col++)
+                    for (let i = 0; i < regBits.value; i++, col++) {
                         tr.appendChild(createToggle(r, col));
+                    }
+
                     cpuSignals.forEach(() => tr.appendChild(createToggle(r, col++)));
 
                     for (let i = 0; i < 3; i++) {
@@ -787,16 +902,26 @@
                         tr.appendChild(td);
                     }
 
+                    // Apply merged cells for this row
                     mergedCells.filter(m => m.row === r).forEach(m => {
-                        const cell = tr.children[m.startCol];
-                        cell.colSpan = m.span;
-                        cell.onclick = () => {
-                            document.querySelectorAll(".merged-selected").forEach(x => x.classList.remove("merged-selected"));
-                            cell.classList.add("merged-selected");
-                            selectedMerge = m;
-                        };
-                        for (let i = 1; i < m.span; i++)
-                            tr.removeChild(tr.children[m.startCol + 1]);
+                        // Only merge if within register section
+                        if (m.startCol >= regStart && m.startCol <= regEnd) {
+                            const cell = tr.children[m.startCol];
+                            cell.colSpan = m.span;
+                            cell.onclick = () => {
+                                document.querySelectorAll(".merged-selected").forEach(x => x.classList.remove("merged-selected"));
+                                cell.classList.add("merged-selected");
+                                selectedMerge = m;
+                            };
+
+                            // Remove the merged cells (but keep their state in cellState)
+                            for (let i = 1; i < m.span; i++) {
+                                const mergedIndex = m.startCol + i;
+                                if (tr.children[mergedIndex]) {
+                                    tr.removeChild(tr.children[mergedIndex]);
+                                }
+                            }
+                        }
                     });
 
                     tbody.appendChild(tr);
@@ -836,13 +961,134 @@
             }
 
             // ----------------- Simplifier -----------------
-            function bitsOf(n, width) { let s = n.toString(2); while (s.length < width) s = '0' + s; return s; }
-            function combineTerms(a, b) { let diff = 0, idx = -1; for (let i = 0; i < a.length; i++) { if (a[i] !== b[i]) { diff++; idx = i; } } if (diff === 1) return a.slice(0, idx) + '-' + a.slice(idx + 1); return null; }
-            function termToMinterms(term) { let res = ['']; for (const ch of term) { if (ch === '0' || ch === '1') { for (let i = 0; i < res.length; i++) res[i] += ch; } else { const copy = res.slice(); for (let i = 0; i < res.length; i++) res[i] += '0'; for (let i = 0; i < copy.length; i++) copy[i] += '1'; res.push(...copy); } } return res.map(s => parseInt(s, 2)); }
-            function qmPrimeImplicants(minterms, nVars) { let groups = {}; minterms.forEach(m => { const bits = bitsOf(m, nVars); const ones = (bits.match(/1/g) || []).length; groups[ones] = groups[ones] || []; groups[ones].push(bits); }); let primeSet = new Set(); let loopGroups = groups; while (true) { let nextGroups = {}; let used = new Set(); let combinedFlag = false; const keys = Object.keys(loopGroups).map(k => parseInt(k)).sort((a, b) => a - b); for (let i = 0; i < keys.length - 1; i++) { const g1 = loopGroups[keys[i]] || []; const g2 = loopGroups[keys[i + 1]] || []; for (const t1 of g1) { for (const t2 of g2) { const combined = combineTerms(t1, t2); if (combined) { combinedFlag = true; used.add(t1); used.add(t2); nextGroups[keys[i]] = nextGroups[keys[i]] || []; if (!nextGroups[keys[i]].includes(combined)) nextGroups[keys[i]].push(combined); } } } } Object.values(loopGroups).flat().forEach(term => { if (!used.has(term)) primeSet.add(term); }); if (!combinedFlag) break; loopGroups = {}; Object.values(nextGroups).flat().forEach(t => { const ones = (t.match(/1/g) || []).length; loopGroups[ones] = loopGroups[ones] || []; if (!loopGroups[ones].includes(t)) loopGroups[ones].push(t); }); } return Array.from(primeSet); }
-            function selectEssentialPrimes(primes, minterms, nVars) { const cover = primes.map(p => ({ term: p, covers: termToMinterms(p).filter(m => minterms.includes(m)) })); const essential = []; const covered = new Set(); for (const m of minterms) { const covering = cover.filter(c => c.covers.includes(m)); if (covering.length === 1) { const t = covering[0].term; if (!essential.includes(t)) essential.push(t); covering[0].covers.forEach(x => covered.add(x)); } } let remaining = minterms.filter(m => !covered.has(m)); while (remaining.length > 0) { let best = null, bestCount = -1; for (const c of cover) { const newcovers = c.covers.filter(m => !covered.has(m)); if (newcovers.length > bestCount) { bestCount = newcovers.length; best = c; } } if (!best || bestCount === 0) break; essential.push(best.term); best.covers.forEach(x => covered.add(x)); remaining = minterms.filter(m => !covered.has(m)); } return uniqueSorted(essential); }
-            function termToExpr(term, vars) { const bits = term.split(''), parts = []; for (let i = 0; i < bits.length; i++) { const b = bits[i]; if (b === '-') continue; parts.push(b === '1' ? vars[i] : '!' + vars[i]); } return parts.length === 0 ? '1' : parts.join(' & '); }
-            function qmSimplify(expr, vars, results) { const n = vars.length; const minterms = []; for (let i = 0; i < results.length; i++) { if (results[i].out) minterms.push(i); } if (minterms.length === 0) return '0'; if (minterms.length === 1 << n) return '1'; const primes = qmPrimeImplicants(minterms, n); const selected = selectEssentialPrimes(primes, minterms, n); if (selected.length === 0) return '0'; return selected.map(p => '(' + termToExpr(p, vars) + ')').join(' | '); }
+            function bitsOf(n, width) {
+                let s = n.toString(2);
+                while (s.length < width) s = '0' + s;
+                return s;
+            }
+
+            function combineTerms(a, b) {
+                let diff = 0, idx = -1;
+                for (let i = 0; i < a.length; i++) {
+                    if (a[i] !== b[i]) {
+                        diff++; idx = i;
+                    }
+                }
+                if (diff === 1) return a.slice(0, idx) + '-' + a.slice(idx + 1); return null;
+            }
+
+            function termToMinterms(term) {
+                let res = [''];
+                for (const ch of term) {
+                    if (ch === '0' || ch === '1') {
+                        for (let i = 0; i < res.length; i++) res[i] += ch;
+                    } else {
+                        const copy = res.slice();
+                        for (let i = 0; i < res.length; i++) res[i] += '0';
+                        for (let i = 0; i < copy.length; i++) copy[i] += '1'; res.push(...copy);
+                    }
+                }
+                return res.map(s => parseInt(s, 2));
+            }
+
+            function qmPrimeImplicants(minterms, nVars) {
+                let groups = {};
+                minterms.forEach(m => {
+                    const bits = bitsOf(m, nVars);
+                    const ones = (bits.match(/1/g) || []).length;
+                    groups[ones] = groups[ones] || []; groups[ones].push(bits);
+                });
+                let primeSet = new Set();
+                let loopGroups = groups;
+                while (true) {
+                    let nextGroups = {};
+                    let used = new Set();
+                    let combinedFlag = false;
+                    const keys = Object.keys(loopGroups).map(k => parseInt(k)).sort((a, b) => a - b);
+                    for (let i = 0; i < keys.length - 1; i++) {
+                        const g1 = loopGroups[keys[i]] || [];
+                        const g2 = loopGroups[keys[i + 1]] || [];
+                        for (const t1 of g1) {
+                            for (const t2 of g2) {
+                                const combined = combineTerms(t1, t2);
+                                if (combined) {
+                                    combinedFlag = true;
+                                    used.add(t1);
+                                    used.add(t2);
+                                    nextGroups[keys[i]] = nextGroups[keys[i]] || [];
+                                    if (!nextGroups[keys[i]].includes(combined)) nextGroups[keys[i]].push(combined);
+                                }
+                            }
+                        }
+                    }
+                    Object.values(loopGroups).flat().forEach(term => {
+                        if (!used.has(term)) primeSet.add(term);
+                    });
+                    if (!combinedFlag) break;
+                    loopGroups = {};
+                    Object.values(nextGroups).flat().forEach(t => {
+                        const ones = (t.match(/1/g) || []).length; loopGroups[ones] = loopGroups[ones] || [];
+                        if (!loopGroups[ones].includes(t)) loopGroups[ones].push(t);
+                    });
+                } return Array.from(primeSet);
+            }
+
+            function selectEssentialPrimes(primes, minterms, nVars) {
+                const cover = primes.map(p => ({
+                    term: p,
+                    covers: termToMinterms(p).filter(m => minterms.includes(m))
+                }));
+                const essential = [];
+                const covered = new Set();
+                for (const m of minterms) {
+                    const covering = cover.filter(c => c.covers.includes(m));
+                    if (covering.length === 1) {
+                        const t = covering[0].term;
+                        if (!essential.includes(t)) essential.push(t);
+                        covering[0].covers.forEach(x => covered.add(x));
+                    }
+                }
+                let remaining = minterms.filter(m => !covered.has(m));
+                while (remaining.length > 0) {
+                    let best = null,
+                        bestCount = -1;
+                    for (const c of cover) {
+                        const newcovers = c.covers.filter(m => !covered.has(m));
+                        if (newcovers.length > bestCount) {
+                            bestCount = newcovers.length;
+                            best = c;
+                        }
+                    }
+                    if (!best || bestCount === 0) break;
+                    essential.push(best.term);
+                    best.covers.forEach(x => covered.add(x));
+                    remaining = minterms.filter(m => !covered.has(m));
+                } return uniqueSorted(essential);
+            }
+
+            function termToExpr(term, vars) {
+                const bits = term.split(''),
+                    parts = [];
+                for (let i = 0; i < bits.length; i++) {
+                    const b = bits[i];
+                    if (b === '-') continue;
+                    parts.push(b === '1' ? vars[i] : '!' + vars[i]);
+                }
+                return parts.length === 0 ? '1' : parts.join(' & ');
+
+            }
+            function qmSimplify(expr, vars, results) {
+                const n = vars.length; const minterms = [];
+                for (let i = 0; i < results.length; i++) {
+                    if (results[i].out) minterms.push(i);
+                }
+                if (minterms.length === 0) return '0';
+                if (minterms.length === 1 << n) return '1';
+                const primes = qmPrimeImplicants(minterms, n);
+                const selected = selectEssentialPrimes(primes, minterms, n);
+                if (selected.length === 0) return '0';
+                return selected.map(p => '(' + termToExpr(p, vars) + ')').join(' | ');
+            }
 
             // ----------------- K-map -----------------
             function gray(n) { if (n === 1) return ['0', '1']; const prev = gray(n - 1); return prev.map(x => '0' + x).concat(prev.slice().reverse().map(x => '1' + x)); }
@@ -927,7 +1173,7 @@
                 });
             });
 
-            // Excel Export Function Corrected Excel Export Function
+            // Fixed Excel Export Function
             function exportToExcel() {
                 try {
                     showExportStatus('Preparing export...', '#0ff');
@@ -935,197 +1181,150 @@
                     // Create workbook
                     const wb = XLSX.utils.book_new();
 
-                    // Create ISA data sheet
-                    const isaData = [];
+                    // Get the table from the UI
+                    const table = document.getElementById('opcodeTable');
+                    const totalInstructions = 1 << opcodeBits;
 
-                    // Build proper header structure
-                    const headerRow1 = [];
-                    const headerRow2 = [];
+                    // Create the main data sheet with proper structure
+                    const mainData = [];
 
-                    // First header row: create merged cell structure
-                    headerRow1.push('Opcode');
-                    for (let i = 1; i < opcodeBits; i++) {
-                        headerRow1.push('');
-                    }
+                    // Headers: Single row with descriptive headers
+                    const headers = ['Opcode (Binary)'];
 
-                    headerRow1.push('Registers');
-                    for (let i = 1; i < parseInt(regBits.value); i++) {
-                        headerRow1.push('');
-                    }
-
-                    headerRow1.push('CPU Control');
-                    for (let i = 1; i < cpuSignals.length; i++) {
-                        headerRow1.push('');
-                    }
-
-                    headerRow1.push('Mnemonic', 'Description', 'Pseudocode');
-                    isaData.push(headerRow1);
-
-                    // Second header row: individual column headers
-                    // Opcode bits (MSB to LSB)
-                    for (let i = opcodeBits - 1; i >= 0; i--) {
-                        headerRow2.push(i.toString());
-                    }
-
-                    // Register bits
+                    // Add register columns
                     for (let i = 0; i < parseInt(regBits.value); i++) {
-                        headerRow2.push(`R${i}`);
+                        headers.push(`R${i}`);
                     }
 
-                    // CPU signals
+                    // Add CPU signal columns (including sfg)
                     for (let i = 0; i < cpuSignals.length; i++) {
-                        headerRow2.push(cpuSignals[i]);
+                        headers.push(cpuSignals[i]);
+                    }
+
+                    headers.push('Mnemonic', 'Description', 'Pseudocode');
+                    mainData.push(headers);
+
+                    // Helper function to get cell value with merged cell support
+                    const getCellValue = (rowIndex, colIndex) => {
+                        // Check if this cell is part of a merged group
+                        const merge = mergedCells.find(m =>
+                            m.row === rowIndex &&
+                            colIndex >= m.startCol &&
+                            colIndex < m.startCol + m.span
+                        );
+
+                        if (merge) {
+                            // Use the value from the first cell of the merged group
+                            const key = `${rowIndex}-${merge.startCol}`;
+                            return cellState[key]?.state || '0';
+                        }
+
+                        // Not merged, get individual cell value
+                        const key = `${rowIndex}-${colIndex}`;
+                        return cellState[key]?.state || '0';
+                    };
+
+                    // Process each instruction
+                    for (let row = 0; row < totalInstructions; row++) {
+                        const rowData = [];
+
+                        // 1. Opcode as single binary string (4 bits in one column)
+                        const opcodeBinary = row.toString(2).padStart(opcodeBits, '0');
+                        rowData.push(opcodeBinary);
+
+                        // 2. Register bits
+                        for (let i = 0; i < parseInt(regBits.value); i++) {
+                            const colIndex = opcodeBits + i;
+                            rowData.push(getCellValue(row, colIndex));
+                        }
+
+                        // 3. CPU signals (including sfg and all other signals)
+                        for (let i = 0; i < cpuSignals.length; i++) {
+                            const colIndex = opcodeBits + parseInt(regBits.value) + i;
+                            rowData.push(getCellValue(row, colIndex));
+                        }
+
+                        // 4. Text fields
+                        for (let i = 0; i < 3; i++) {
+                            const key = `${row}-text-${i}`;
+                            rowData.push(cellState[key]?.text || '');
+                        }
+
+                        mainData.push(rowData);
+                    }
+
+                    // Create main worksheet
+                    const mainWs = XLSX.utils.aoa_to_sheet(mainData);
+
+                    // Style main sheet with proper column widths
+                    const mainColWidths = [
+                        { wch: opcodeBits + 2 }, // Opcode binary column
+                    ];
+
+                    // Register columns
+                    for (let i = 0; i < parseInt(regBits.value); i++) {
+                        mainColWidths.push({ wch: 6 });
+                    }
+
+                    // CPU signal columns - ensure sfg and all signals have proper width
+                    for (let i = 0; i < cpuSignals.length; i++) {
+                        mainColWidths.push({ wch: Math.max(cpuSignals[i].length + 2, 8) });
                     }
 
                     // Text columns
-                    headerRow2.push('', '', '');
-                    isaData.push(headerRow2);
+                    mainColWidths.push({ wch: 20 }, { wch: 30 }, { wch: 25 });
+                    mainWs['!cols'] = mainColWidths;
 
-                    // Process each instruction
-                    const totalInstructions = 1 << opcodeBits;
-                    for (let row = 0; row < totalInstructions; row++) {
-                        const rowData = [];
+                    XLSX.utils.book_append_sheet(wb, mainWs, 'ISA Data');
 
-                        // Opcode bits (MSB to LSB)
-                        const opcodeBinary = row.toString(2).padStart(opcodeBits, '0');
-                        for (let i = 0; i < opcodeBits; i++) {
-                            rowData.push(opcodeBinary[i]);
-                        }
+                    // Create a detailed view with opcode in multiple formats
+                    const detailedData = [];
+                    const detailedHeaders = [
+                        'Instruction #',
+                        'Opcode (Dec)',
+                        'Opcode (Hex)',
+                        'Opcode (Binary)',
+                    ];
 
-                        // Register bits
-                        for (let i = 0; i < parseInt(regBits.value); i++) {
-                            const key = `${row}-${opcodeBits + i}`;
-                            rowData.push(cellState[key]?.state || '0');
-                        }
-
-                        // CPU signals
-                        for (let i = 0; i < cpuSignals.length; i++) {
-                            const key = `${row}-${opcodeBits + parseInt(regBits.value) + i}`;
-                            rowData.push(cellState[key]?.state || '0');
-                        }
-
-                        // Text fields
-                        for (let i = 0; i < 3; i++) {
-                            const key = `${row}-text-${i}`;
-                            rowData.push(cellState[key]?.text || '');
-                        }
-
-                        isaData.push(rowData);
-                    }
-
-                    // Create worksheet
-                    const ws = XLSX.utils.aoa_to_sheet(isaData);
-
-                    // Add merged cell ranges for the header
-                    const merge = [];
-
-                    // Opcode header merge (A1: for opcodeBits columns)
-                    if (opcodeBits > 1) {
-                        merge.push({
-                            s: { r: 0, c: 0 },
-                            e: { r: 0, c: opcodeBits - 1 }
-                        });
-                    }
-
-                    // Registers header merge
-                    if (parseInt(regBits.value) > 1) {
-                        merge.push({
-                            s: { r: 0, c: opcodeBits },
-                            e: { r: 0, c: opcodeBits + parseInt(regBits.value) - 1 }
-                        });
-                    }
-
-                    // CPU Control header merge
-                    if (cpuSignals.length > 1) {
-                        merge.push({
-                            s: { r: 0, c: opcodeBits + parseInt(regBits.value) },
-                            e: { r: 0, c: opcodeBits + parseInt(regBits.value) + cpuSignals.length - 1 }
-                        });
-                    }
-
-                    ws['!merges'] = merge;
-
-                    // Style column widths
-                    const colWidths = [];
-                    for (let i = 0; i < isaData[0].length; i++) {
-                        let maxLength = 0;
-                        for (let j = 0; j < isaData.length; j++) {
-                            if (isaData[j][i] && isaData[j][i].toString().length > maxLength) {
-                                maxLength = isaData[j][i].toString().length;
-                            }
-                        }
-                        colWidths.push({ wch: Math.min(maxLength + 2, 30) });
-                    }
-                    ws['!cols'] = colWidths;
-
-                    // Add borders to all cells
-                    const range = XLSX.utils.decode_range(ws['!ref']);
-                    for (let R = range.s.r; R <= range.e.r; ++R) {
-                        for (let C = range.s.c; C <= range.e.c; ++C) {
-                            const cell_address = { c: C, r: R };
-                            const cell_ref = XLSX.utils.encode_cell(cell_address);
-                            if (!ws[cell_ref]) ws[cell_ref] = { t: 's', v: '' };
-                            if (!ws[cell_ref].s) ws[cell_ref].s = {};
-                            ws[cell_ref].s.border = {
-                                top: { style: "thin", color: { rgb: "000000" } },
-                                right: { style: "thin", color: { rgb: "000000" } },
-                                bottom: { style: "thin", color: { rgb: "000000" } },
-                                left: { style: "thin", color: { rgb: "000000" } }
-                            };
-
-                            // Header styling
-                            if (R < 2) {
-                                ws[cell_ref].s.fill = {
-                                    patternType: "solid",
-                                    fgColor: { rgb: "E0E0E0" }
-                                };
-                                ws[cell_ref].s.font = {
-                                    bold: true
-                                };
-                            }
-                        }
-                    }
-
-                    // Add worksheet to workbook
-                    XLSX.utils.book_append_sheet(wb, ws, 'Instruction Set');
-
-                    // Create simplified data view (without merged headers)
-                    const simpleData = [];
-                    const simpleHeaders = [];
-
-                    // Build simple headers
-                    for (let i = opcodeBits - 1; i >= 0; i--) {
-                        simpleHeaders.push(`Op${i}`);
-                    }
+                    // Add register columns
                     for (let i = 0; i < parseInt(regBits.value); i++) {
-                        simpleHeaders.push(`R${i}`);
+                        detailedHeaders.push(`R${i}`);
                     }
-                    for (const signal of cpuSignals) {
-                        simpleHeaders.push(signal);
-                    }
-                    simpleHeaders.push('Mnemonic', 'Description', 'Pseudocode');
-                    simpleData.push(simpleHeaders);
 
-                    // Add data
+                    // Add CPU signal columns
+                    for (let i = 0; i < cpuSignals.length; i++) {
+                        detailedHeaders.push(cpuSignals[i]);
+                    }
+
+                    detailedHeaders.push('Mnemonic', 'Description', 'Pseudocode');
+                    detailedData.push(detailedHeaders);
+
                     for (let row = 0; row < totalInstructions; row++) {
                         const rowData = [];
 
-                        // Opcode bits
-                        const opcodeBinary = row.toString(2).padStart(opcodeBits, '0');
-                        for (let i = 0; i < opcodeBits; i++) {
-                            rowData.push(opcodeBinary[i]);
-                        }
+                        // Instruction number
+                        rowData.push(row);
+
+                        // Opcode in decimal
+                        rowData.push(row);
+
+                        // Opcode in hex (padded)
+                        const hexDigits = Math.ceil(opcodeBits / 4);
+                        rowData.push(row.toString(16).toUpperCase().padStart(hexDigits, '0'));
+
+                        // Opcode in binary
+                        rowData.push(row.toString(2).padStart(opcodeBits, '0'));
 
                         // Register bits
                         for (let i = 0; i < parseInt(regBits.value); i++) {
-                            const key = `${row}-${opcodeBits + i}`;
-                            rowData.push(cellState[key]?.state || '0');
+                            const colIndex = opcodeBits + i;
+                            rowData.push(getCellValue(row, colIndex));
                         }
 
-                        // CPU signals
+                        // CPU signals (make sure sfg and all signals are included)
                         for (let i = 0; i < cpuSignals.length; i++) {
-                            const key = `${row}-${opcodeBits + parseInt(regBits.value) + i}`;
-                            rowData.push(cellState[key]?.state || '0');
+                            const colIndex = opcodeBits + parseInt(regBits.value) + i;
+                            rowData.push(getCellValue(row, colIndex));
                         }
 
                         // Text fields
@@ -1134,11 +1333,62 @@
                             rowData.push(cellState[key]?.text || '');
                         }
 
-                        simpleData.push(rowData);
+                        detailedData.push(rowData);
                     }
 
-                    const simpleWs = XLSX.utils.aoa_to_sheet(simpleData);
-                    XLSX.utils.book_append_sheet(wb, simpleWs, 'Simple View');
+                    const detailedWs = XLSX.utils.aoa_to_sheet(detailedData);
+
+                    // Style detailed sheet
+                    const detailedColWidths = [
+                        { wch: 12 }, // Instruction #
+                        { wch: 10 }, // Opcode (Dec)
+                        { wch: 8 },  // Opcode (Hex)
+                        { wch: opcodeBits + 2 }, // Opcode (Binary)
+                    ];
+
+                    for (let i = 0; i < parseInt(regBits.value); i++) {
+                        detailedColWidths.push({ wch: 6 });
+                    }
+
+                    for (let i = 0; i < cpuSignals.length; i++) {
+                        detailedColWidths.push({ wch: Math.max(cpuSignals[i].length + 2, 8) });
+                    }
+
+                    detailedColWidths.push({ wch: 20 }, { wch: 30 }, { wch: 25 });
+                    detailedWs['!cols'] = detailedColWidths;
+
+                    XLSX.utils.book_append_sheet(wb, detailedWs, 'Detailed View');
+
+                    // Create a sheet showing the visual table structure (for reference)
+                    const tableData = [];
+
+                    // Add the actual table headers from the UI
+                    for (let i = 0; i < table.rows.length; i++) {
+                        const row = table.rows[i];
+                        const rowData = [];
+
+                        for (let j = 0; j < row.cells.length; j++) {
+                            const cell = row.cells[j];
+
+                            let cellValue = '';
+                            if (cell.classList.contains('readonly')) {
+                                cellValue = cell.textContent || '';
+                            } else if (cell.classList.contains('toggle')) {
+                                cellValue = cell.dataset.state || '0';
+                            } else if (cell.querySelector('input')) {
+                                cellValue = cell.querySelector('input').value || '';
+                            } else {
+                                cellValue = cell.textContent || '';
+                            }
+
+                            rowData.push(cellValue);
+                        }
+
+                        tableData.push(rowData);
+                    }
+
+                    const tableWs = XLSX.utils.aoa_to_sheet(tableData);
+                    XLSX.utils.book_append_sheet(wb, tableWs, 'Table View');
 
                     // Create configuration sheet
                     const configData = [
@@ -1153,26 +1403,29 @@
                         ['Register Bits:', regBits.value],
                         ['Total Instructions:', totalInstructions],
                         ['Control Signals:', cpuSignals.length],
+                        ['Merged Cells Count:', mergedCells.length],
                         [''],
-                        ['Signal Names'],
+                        ['Signal Names (in order)'],
                         ...cpuSignals.map((signal, idx) => [idx + 1, signal]),
                         [''],
                         ['Data Legend'],
-                        ['0 = Signal OFF'],
-                        ['1 = Signal ON'],
-                        ['X = Don\'t Care'],
+                        ['0 = Signal OFF/Low'],
+                        ['1 = Signal ON/High'],
+                        ['X = Don\'t Care (wildcard)'],
+                        ['M = Merged cell value (applies to all bits in group)'],
                         [''],
                         ['Sheet Information'],
-                        ['1. Instruction Set: Full table with headers matching the UI'],
-                        ['2. Simple View: Clean data without merged headers'],
-                        ['3. Configuration: This sheet']
+                        ['1. ISA Data: Clean data with opcode as single binary string'],
+                        ['2. Detailed View: Opcode in multiple formats'],
+                        ['3. Table View: Exact replica of UI table'],
+                        ['4. Configuration: This sheet']
                     ];
 
                     const configWs = XLSX.utils.aoa_to_sheet(configData);
                     XLSX.utils.book_append_sheet(wb, configWs, 'Configuration');
 
                     // Save file
-                    const fileName = `CPU_ISA_${new Date().toISOString().split('T')[0]}.xlsx`;
+                    const fileName = `CPU_Design_Export_${new Date().toISOString().split('T')[0]}.xlsx`;
                     XLSX.writeFile(wb, fileName);
 
                     showExportStatus('Export completed successfully!', '#0f0');
