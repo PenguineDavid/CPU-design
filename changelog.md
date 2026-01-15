@@ -21,7 +21,7 @@ CPU Opcode & Control Word Designer A web-based tool for designing CPU instructio
 ## **V1.1.1**  
   - **title:** section names  
   - **type:** hot fix
-     **date:** 13/01/2026
+  - **date:** 13/01/2026
   ## Bug Fixes:  
     - fixed the fact section areas didnt have names  
   ## features:  
@@ -38,3 +38,15 @@ CPU Opcode & Control Word Designer A web-based tool for designing CPU instructio
   ## Features:
     - added jumping side bar and links to gh
     - added boolean expression simplifier
+
+---
+
+## **V1.2.1**
+  - **title:** quality of life update
+  - **type:** major bugpatch
+  - **date:** 15/01/2026
+  ## Bug Fixes:
+    - fixed many reset and positional bugs
+  ## Features:
+    - None
+    
