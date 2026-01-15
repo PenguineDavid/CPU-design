@@ -135,7 +135,7 @@ literaly anything.
 
 ## example
 
-<img src="./assets/image.jpg" alt="example img" width="400">
+<img src="./assets/exampleimg.png" alt="example img" width="400">
 
 ---
 ## Copy right notice 
