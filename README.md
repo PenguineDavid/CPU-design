@@ -133,6 +133,11 @@ literaly anything.
 
 ---
 
+## example
+
+<img src="./assets/image.jpg" alt="example img" width="400">
+
+---
 ## Copy right notice 
 
 **Copy-right:** ©2026 David S all rights reserved   
