@@ -141,5 +141,3 @@ literaly anything.
 ## Copy right notice 
 
 **Copy-right:** ©2026 David S all rights reserved   
-**Creative Commons:** Copyright: © 2026 David S all rights reserved Creative-Commons: This work is licensed under a Creative    Commons Attribution-NonCommercial 4.0 International License   
-**Author:** David S   
