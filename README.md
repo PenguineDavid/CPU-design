@@ -138,6 +138,6 @@ literaly anything.
 <img src="./assets/exampleimage.png" alt="example img" style="max-width: 100%; height: auto; display: block;">
 
 ---
-## Copy right notice 
+## Copyright notice 
 
 **Copy-right:** ©2026 David S all rights reserved   
